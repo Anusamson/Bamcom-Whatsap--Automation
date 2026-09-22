@@ -26,6 +26,7 @@ use Illuminate\Support\Str;
  * @property ?int $pipeline_id
  * @property ?int $pipeline_stage_id
  * @property ?int $assigned_user_id
+ * @property ?int $property_id
  * @property string $title
  * @property LeadSource $lead_source
  * @property LeadStatus $status
@@ -48,6 +49,7 @@ use Illuminate\Support\Str;
  * @property-read ?Pipeline $pipeline
  * @property-read ?PipelineStage $stage
  * @property-read ?User $assignedUser
+ * @property-read ?Property $property
  * @property-read string $formatted_budget
  * @property-read bool $is_hot
  */
@@ -66,6 +68,7 @@ class Lead extends Model
         'pipeline_id',
         'pipeline_stage_id',
         'assigned_user_id',
+        'property_id',
         'title',
         'lead_source',
         'status',
@@ -159,6 +162,16 @@ class Lead extends Model
     public function stage(): BelongsTo
     {
         return $this->belongsTo(PipelineStage::class, 'pipeline_stage_id');
+    }
+
+    /**
+     * The target property this lead is interested in.
+     *
+     * @return BelongsTo<Property, $this>
+     */
+    public function property(): BelongsTo
+    {
+        return $this->belongsTo(Property::class);
     }
 
     /**

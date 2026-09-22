@@ -13,7 +13,9 @@ import {
     UsersRound,
     Contact,
     TrendingUp,
-    Columns3
+    Columns3,
+    Building2,
+    MapPin
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -56,6 +58,22 @@ export default function Sidebar({
             icon: Columns3,
             badge: 'Kanban',
             badgeColor: 'bg-indigo-500 text-white',
+        },
+        {
+            name: 'Properties',
+            href: route('properties.index'),
+            active: route().current('properties.*'),
+            icon: Building2,
+            badge: 'Inventory',
+            badgeColor: 'bg-emerald-600 text-white',
+        },
+        {
+            name: 'Estates',
+            href: route('estates.index'),
+            active: route().current('estates.*'),
+            icon: MapPin,
+            badge: 'Estates',
+            badgeColor: 'bg-teal-600 text-white',
         },
         {
             name: 'Users Directory',

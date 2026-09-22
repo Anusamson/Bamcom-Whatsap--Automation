@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\LeadController;
 use App\Http\Controllers\Api\V1\PipelineController;
+use App\Http\Controllers\Api\V1\PropertyController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,12 @@ Route::prefix('v1')->group(function (): void {
     // Public Authentication
     Route::post('/auth/register', [AuthController::class, 'register'])->name('api.v1.auth.register');
     Route::post('/auth/login', [AuthController::class, 'login'])->name('api.v1.auth.login');
+
+    // Property Management & Authoritative AI Grounding Endpoints
+    Route::get('/properties/ai-context', [PropertyController::class, 'aiContext'])->name('api.v1.properties.ai-context');
+    Route::post('/properties/ai-query', [PropertyController::class, 'aiQuery'])->name('api.v1.properties.ai-query');
+    Route::get('/properties', [PropertyController::class, 'index'])->name('api.v1.properties.index');
+    Route::get('/properties/{property}', [PropertyController::class, 'show'])->name('api.v1.properties.show');
 
     // Authenticated Routes
     Route::middleware('auth:sanctum')->group(function (): void {

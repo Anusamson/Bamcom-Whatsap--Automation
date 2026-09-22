@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\EstateController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\UserController;
@@ -58,6 +60,10 @@ Route::middleware('auth')->group(function () {
 
     // Sales Pipelines & Kanban Board
     Route::get('/pipelines', [PipelineController::class, 'index'])->name('pipelines.index');
+
+    // Property Management & Estates
+    Route::resource('estates', EstateController::class);
+    Route::resource('properties', PropertyController::class);
 });
 
 require __DIR__.'/auth.php';

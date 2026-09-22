@@ -68,6 +68,12 @@ enum PermissionEnum: string
     case ReportsView = 'reports.view';
     case ReportsExport = 'reports.export';
 
+    // Property & Estate Management
+    case PropertiesView = 'properties.view';
+    case PropertiesCreate = 'properties.create';
+    case PropertiesEdit = 'properties.edit';
+    case PropertiesDelete = 'properties.delete';
+
     // System Settings & Maintenance
     case SettingsView = 'settings.view';
     case SettingsEdit = 'settings.edit';
@@ -103,6 +109,9 @@ enum PermissionEnum: string
 
             self::TicketsView, self::TicketsCreate, self::TicketsReply,
             self::TicketsResolve => 'Customer Support',
+
+            self::PropertiesView, self::PropertiesCreate, self::PropertiesEdit,
+            self::PropertiesDelete => 'Property Management',
 
             self::ReportsView, self::ReportsExport => 'Reports & Analytics',
 
@@ -164,6 +173,11 @@ enum PermissionEnum: string
             self::TicketsCreate => 'Open Support Tickets',
             self::TicketsReply => 'Reply to Tickets',
             self::TicketsResolve => 'Resolve Tickets',
+
+            self::PropertiesView => 'View Properties & Estates',
+            self::PropertiesCreate => 'Create Properties & Estates',
+            self::PropertiesEdit => 'Edit Properties & Estates',
+            self::PropertiesDelete => 'Delete Properties & Estates',
 
             self::ReportsView => 'View Analytical Reports',
             self::ReportsExport => 'Export Report Datasets',
