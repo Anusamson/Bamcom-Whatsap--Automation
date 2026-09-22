@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             RoleAndPermissionSeeder::class,
             PropertySeeder::class,
             DealSeeder::class,
+            WhatsAppSeeder::class,
         ]);
     }
 }

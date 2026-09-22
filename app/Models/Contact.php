@@ -149,6 +149,16 @@ class Contact extends Model
     }
 
     /**
+     * Touch the last contact touchpoint timestamp.
+     */
+    public function touchLastContact(): self
+    {
+        $this->update(['last_contact_at' => now()]);
+
+        return $this;
+    }
+
+    /**
      * Compute full name.
      */
     protected function fullName(): Attribute

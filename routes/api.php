@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\PipelineController;
 use App\Http\Controllers\Api\V1\PropertyController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -21,6 +22,10 @@ Route::prefix('v1')->group(function (): void {
     // Health & System Info
     Route::get('/health', [HealthController::class, 'index'])->name('api.v1.health');
     Route::get('/version', [HealthController::class, 'version'])->name('api.v1.version');
+
+    // Meta WhatsApp Cloud API Webhooks
+    Route::get('/whatsapp/webhook', [WhatsAppWebhookController::class, 'verify'])->name('api.v1.whatsapp.webhook.verify');
+    Route::post('/whatsapp/webhook', [WhatsAppWebhookController::class, 'receive'])->name('api.v1.whatsapp.webhook.receive');
 
     // Public Authentication
     Route::post('/auth/register', [AuthController::class, 'register'])->name('api.v1.auth.register');

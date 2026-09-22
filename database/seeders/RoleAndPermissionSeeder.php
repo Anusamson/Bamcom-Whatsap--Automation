@@ -104,6 +104,9 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionEnum::DealsDelete->value,
             PermissionEnum::ReportsView->value,
             PermissionEnum::ReportsExport->value,
+            PermissionEnum::WhatsAppView->value,
+            PermissionEnum::WhatsAppManage->value,
+            PermissionEnum::WhatsAppSend->value,
             PermissionEnum::SettingsView->value,
             PermissionEnum::SystemHealth->value,
         ]);
@@ -128,6 +131,9 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionEnum::DealsCreate->value,
             PermissionEnum::DealsEdit->value,
             PermissionEnum::DealsDelete->value,
+            PermissionEnum::WhatsAppView->value,
+            PermissionEnum::WhatsAppManage->value,
+            PermissionEnum::WhatsAppSend->value,
             PermissionEnum::CustomersView->value,
             PermissionEnum::CustomersCreate->value,
             PermissionEnum::CustomersEdit->value,
@@ -147,6 +153,8 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionEnum::DealsView->value,
             PermissionEnum::DealsCreate->value,
             PermissionEnum::DealsEdit->value,
+            PermissionEnum::WhatsAppView->value,
+            PermissionEnum::WhatsAppSend->value,
             PermissionEnum::CustomersView->value,
             PermissionEnum::CustomersCreate->value,
         ]);

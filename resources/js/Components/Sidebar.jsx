@@ -16,7 +16,8 @@ import {
     Columns3,
     Building2,
     MapPin,
-    Handshake
+    Handshake,
+    MessageSquare
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -113,6 +114,14 @@ export default function Sidebar({
             href: route('profile.edit'),
             active: route().current('profile.edit'),
             icon: UserCheck,
+        },
+        {
+            name: 'WhatsApp Platform',
+            href: route('whatsapp.settings.index'),
+            active: route().current('whatsapp.settings.*'),
+            icon: MessageSquare,
+            badge: 'Meta API',
+            badgeColor: 'bg-emerald-600 text-white',
         },
         {
             name: 'System Config',

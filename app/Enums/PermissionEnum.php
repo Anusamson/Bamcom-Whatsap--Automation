@@ -80,6 +80,11 @@ enum PermissionEnum: string
     case DealsEdit = 'deals.edit';
     case DealsDelete = 'deals.delete';
 
+    // WhatsApp Platform & Messaging
+    case WhatsAppView = 'whatsapp.view';
+    case WhatsAppManage = 'whatsapp.manage';
+    case WhatsAppSend = 'whatsapp.send';
+
     // System Settings & Maintenance
     case SettingsView = 'settings.view';
     case SettingsEdit = 'settings.edit';
@@ -123,6 +128,9 @@ enum PermissionEnum: string
             self::DealsDelete => 'Opportunities & Deals',
 
             self::ReportsView, self::ReportsExport => 'Reports & Analytics',
+
+            self::WhatsAppView, self::WhatsAppManage,
+            self::WhatsAppSend => 'WhatsApp Management',
 
             self::SettingsView, self::SettingsEdit, self::SystemHealth => 'System Settings',
         };
@@ -195,6 +203,10 @@ enum PermissionEnum: string
 
             self::ReportsView => 'View Analytical Reports',
             self::ReportsExport => 'Export Report Datasets',
+
+            self::WhatsAppView => 'View WhatsApp Settings & Accounts',
+            self::WhatsAppManage => 'Manage WhatsApp Connection & Templates',
+            self::WhatsAppSend => 'Send WhatsApp Outbound Messages',
 
             self::SettingsView => 'View System Settings',
             self::SettingsEdit => 'Modify System Settings',

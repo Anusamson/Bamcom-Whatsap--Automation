@@ -12,6 +12,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserRoleAssignmentController;
+use App\Http\Controllers\WhatsAppSettingsController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -72,6 +73,11 @@ Route::middleware('auth')->group(function () {
     Route::match(['post', 'patch'], '/deals/{deal}/reopen', [DealController::class, 'reopen'])->name('deals.reopen');
     Route::resource('deals', DealController::class);
     Route::get('/opportunities', fn () => redirect()->route('deals.index'))->name('opportunities.index');
+
+    // WhatsApp Business Platform Settings
+    Route::get('/settings/whatsapp', [WhatsAppSettingsController::class, 'index'])->name('whatsapp.settings.index');
+    Route::post('/settings/whatsapp/test-connection', [WhatsAppSettingsController::class, 'testConnection'])->name('whatsapp.settings.test-connection');
+    Route::post('/settings/whatsapp/sync-templates', [WhatsAppSettingsController::class, 'syncTemplates'])->name('whatsapp.settings.sync-templates');
 });
 
 require __DIR__.'/auth.php';
