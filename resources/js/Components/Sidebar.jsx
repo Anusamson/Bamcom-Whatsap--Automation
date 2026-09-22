@@ -8,7 +8,9 @@ import {
     ChevronLeft,
     ChevronRight,
     Sparkles,
-    UserCheck
+    UserCheck,
+    Users,
+    UsersRound
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -29,21 +31,20 @@ export default function Sidebar({
             badgeColor: 'bg-emerald-500 text-white',
         },
         {
-            name: 'Architecture & Stack',
-            href: '#architecture',
-            active: false,
-            icon: Layers,
-            badge: 'v13',
+            name: 'Users Directory',
+            href: route('users.index'),
+            active: route().current('users.*'),
+            icon: Users,
+            badge: 'Admin',
             badgeColor: 'bg-blue-600 text-white',
         },
         {
-            name: 'API v1 Foundation',
-            href: route('api.v1.health'),
-            active: false,
-            external: true,
-            icon: Activity,
-            badge: 'Probe',
-            badgeColor: 'bg-red-600 text-white',
+            name: 'Teams & Groups',
+            href: route('teams.index'),
+            active: route().current('teams.*'),
+            icon: UsersRound,
+            badge: 'Sales',
+            badgeColor: 'bg-emerald-600 text-white',
         },
         {
             name: 'Roles & Permissions',

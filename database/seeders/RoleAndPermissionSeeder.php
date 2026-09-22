@@ -3,8 +3,10 @@
 namespace Database\Seeders;
 
 use App\Enums\PermissionEnum;
+use App\Enums\TeamType;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -50,6 +52,12 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionEnum::RolesCreate->value,
             PermissionEnum::RolesEdit->value,
             PermissionEnum::PermissionsView->value,
+            PermissionEnum::UsersDisable->value,
+            PermissionEnum::TeamsView->value,
+            PermissionEnum::TeamsCreate->value,
+            PermissionEnum::TeamsEdit->value,
+            PermissionEnum::TeamsDelete->value,
+            PermissionEnum::TeamsAssign->value,
             PermissionEnum::LeadsView->value,
             PermissionEnum::LeadsCreate->value,
             PermissionEnum::LeadsEdit->value,
@@ -80,6 +88,8 @@ class RoleAndPermissionSeeder extends Seeder
         // 5. Sales Manager
         $roles[UserRole::SalesManager->value]->syncPermissions([
             PermissionEnum::UsersView->value,
+            PermissionEnum::TeamsView->value,
+            PermissionEnum::TeamsAssign->value,
             PermissionEnum::LeadsView->value,
             PermissionEnum::LeadsCreate->value,
             PermissionEnum::LeadsEdit->value,
@@ -133,6 +143,7 @@ class RoleAndPermissionSeeder extends Seeder
         // 10. Management
         $roles[UserRole::Management->value]->syncPermissions([
             PermissionEnum::UsersView->value,
+            PermissionEnum::TeamsView->value,
             PermissionEnum::ReportsView->value,
             PermissionEnum::ReportsExport->value,
             PermissionEnum::LeadsView->value,
@@ -148,41 +159,65 @@ class RoleAndPermissionSeeder extends Seeder
                 'name' => 'Super Administrator',
                 'email' => 'superadmin@bamcom.ai',
                 'role' => UserRole::SuperAdmin,
+                'phone' => '+1 (555) 019-2831',
+                'job_title' => 'Chief Executive Officer',
+                'department' => 'Executive Office',
             ],
             [
                 'name' => 'System Administrator',
                 'email' => 'admin@bamcom.ai',
                 'role' => UserRole::Admin,
+                'phone' => '+1 (555) 014-9922',
+                'job_title' => 'Lead System Administrator',
+                'department' => 'IT & Operations',
             ],
             [
                 'name' => 'Sarah Sales Manager',
                 'email' => 'sales.manager@bamcom.ai',
                 'role' => UserRole::SalesManager,
+                'phone' => '+1 (555) 012-3456',
+                'job_title' => 'Sales Director',
+                'department' => 'Enterprise Sales',
             ],
             [
                 'name' => 'Sam Sales Exec',
                 'email' => 'sales.exec@bamcom.ai',
                 'role' => UserRole::SalesExecutive,
+                'phone' => '+1 (555) 018-7654',
+                'job_title' => 'Senior Sales Executive',
+                'department' => 'Enterprise Sales',
             ],
             [
                 'name' => 'Claire Support',
                 'email' => 'support@bamcom.ai',
                 'role' => UserRole::CustomerSupport,
+                'phone' => '+1 (555) 017-4321',
+                'job_title' => 'Support Team Lead',
+                'department' => 'Customer Success',
             ],
             [
                 'name' => 'Mike Marketing',
                 'email' => 'marketing@bamcom.ai',
                 'role' => UserRole::Marketing,
+                'phone' => '+1 (555) 016-8765',
+                'job_title' => 'Head of Growth & Marketing',
+                'department' => 'Marketing',
             ],
             [
                 'name' => 'Ian Inspector',
                 'email' => 'inspection@bamcom.ai',
                 'role' => UserRole::InspectionOfficer,
+                'phone' => '+1 (555) 015-1122',
+                'job_title' => 'Senior Field Inspector',
+                'department' => 'Quality & Verification',
             ],
             [
                 'name' => 'Mary Management',
                 'email' => 'management@bamcom.ai',
                 'role' => UserRole::Management,
+                'phone' => '+1 (555) 013-9876',
+                'job_title' => 'Operations Director',
+                'department' => 'Management',
             ],
         ];
 
@@ -200,13 +235,91 @@ class RoleAndPermissionSeeder extends Seeder
 
             // Sync role via Spatie
             $user->syncRoles([$userData['role']->value]);
+
+            // Sync Profile
+            $user->profile()->updateOrCreate([], [
+                'phone' => $userData['phone'],
+                'job_title' => $userData['job_title'],
+                'department' => $userData['department'],
+                'bio' => "Professional {$userData['job_title']} at Bamcom AI CRM.",
+            ]);
         }
 
-        // Ensure primary developer/owner account is granted Super Admin
+        // Ensure primary developer/owner account is granted Super Admin and has a profile
         $primaryUser = User::where('email', 'anusamson25@gmail.com')->first();
         if ($primaryUser) {
             $primaryUser->update(['role' => UserRole::SuperAdmin]);
             $primaryUser->syncRoles([UserRole::SuperAdmin->value]);
+            $primaryUser->profile()->updateOrCreate([], [
+                'phone' => '+1 (555) 000-0001',
+                'job_title' => 'Principal Founder / Super Admin',
+                'department' => 'Executive Office',
+                'bio' => 'System founder and principal administrator.',
+            ]);
+        }
+
+        // 11. Seed Default Teams and Sales Team Assignments
+        $salesManager = User::where('email', 'sales.manager@bamcom.ai')->first();
+        $salesExec = User::where('email', 'sales.exec@bamcom.ai')->first();
+        $supportUser = User::where('email', 'support@bamcom.ai')->first();
+        $inspectorUser = User::where('email', 'inspection@bamcom.ai')->first();
+
+        // 1. Enterprise Sales Team
+        $salesTeam = Team::updateOrCreate(
+            ['name' => 'Enterprise Sales Team'],
+            [
+                'description' => 'Dedicated unit driving high-value corporate client acquisition and pipeline conversions.',
+                'type' => TeamType::Sales,
+                'leader_id' => $salesManager?->id,
+                'is_active' => true,
+            ]
+        );
+
+        if ($salesManager && $salesExec) {
+            $salesTeam->members()->sync([
+                $salesManager->id => ['role_in_team' => 'leader', 'joined_at' => now()],
+                $salesExec->id => ['role_in_team' => 'member', 'joined_at' => now()],
+            ]);
+
+            // Assign sales team as primary team
+            $salesManager->update(['team_id' => $salesTeam->id]);
+            $salesExec->update(['team_id' => $salesTeam->id]);
+        }
+
+        // 2. Customer Care Squad
+        $supportTeam = Team::updateOrCreate(
+            ['name' => 'Customer Care Squad'],
+            [
+                'description' => 'Front-line customer satisfaction, rapid issue triage, and onboarding assistance.',
+                'type' => TeamType::Support,
+                'leader_id' => $supportUser?->id,
+                'is_active' => true,
+            ]
+        );
+
+        if ($supportUser) {
+            $supportTeam->members()->sync([
+                $supportUser->id => ['role_in_team' => 'leader', 'joined_at' => now()],
+            ]);
+            $supportUser->update(['team_id' => $supportTeam->id]);
+        }
+
+        // 3. Field Inspection Unit
+        $inspectionTeam = Team::updateOrCreate(
+            ['name' => 'Field Inspection Unit'],
+            [
+                'description' => 'On-site asset verification, compliance audits, and field inspection reporting.',
+                'type' => TeamType::Inspection,
+                'leader_id' => $inspectorUser?->id,
+                'is_active' => true,
+            ]
+        );
+
+        if ($inspectorUser) {
+            $inspectionTeam->members()->sync([
+                $inspectorUser->id => ['role_in_team' => 'leader', 'joined_at' => now()],
+            ]);
+            $inspectorUser->update(['team_id' => $inspectionTeam->id]);
         }
     }
 }

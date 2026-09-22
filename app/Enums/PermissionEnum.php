@@ -12,11 +12,19 @@ enum PermissionEnum: string
     case UsersCreate = 'users.create';
     case UsersEdit = 'users.edit';
     case UsersDelete = 'users.delete';
+    case UsersDisable = 'users.disable';
     case RolesView = 'roles.view';
     case RolesCreate = 'roles.create';
     case RolesEdit = 'roles.edit';
     case RolesDelete = 'roles.delete';
     case PermissionsView = 'permissions.view';
+
+    // Teams & Sales Assignments
+    case TeamsView = 'teams.view';
+    case TeamsCreate = 'teams.create';
+    case TeamsEdit = 'teams.edit';
+    case TeamsDelete = 'teams.delete';
+    case TeamsAssign = 'teams.assign';
 
     // CRM Leads Management
     case LeadsView = 'leads.view';
@@ -64,9 +72,12 @@ enum PermissionEnum: string
     public function group(): string
     {
         return match ($this) {
-            self::UsersView, self::UsersCreate, self::UsersEdit, self::UsersDelete,
+            self::UsersView, self::UsersCreate, self::UsersEdit, self::UsersDelete, self::UsersDisable,
             self::RolesView, self::RolesCreate, self::RolesEdit, self::RolesDelete,
             self::PermissionsView => 'Access Control & Users',
+
+            self::TeamsView, self::TeamsCreate, self::TeamsEdit, self::TeamsDelete,
+            self::TeamsAssign => 'Teams Management',
 
             self::LeadsView, self::LeadsCreate, self::LeadsEdit, self::LeadsDelete,
             self::LeadsAssign => 'Leads Management',
@@ -99,11 +110,18 @@ enum PermissionEnum: string
             self::UsersCreate => 'Create Users',
             self::UsersEdit => 'Edit Users',
             self::UsersDelete => 'Delete Users',
+            self::UsersDisable => 'Disable / Enable Users',
             self::RolesView => 'View Roles',
             self::RolesCreate => 'Create Roles',
             self::RolesEdit => 'Edit Roles',
             self::RolesDelete => 'Delete Roles',
             self::PermissionsView => 'View Permissions',
+
+            self::TeamsView => 'View Teams',
+            self::TeamsCreate => 'Create Teams',
+            self::TeamsEdit => 'Edit Teams',
+            self::TeamsDelete => 'Delete Teams',
+            self::TeamsAssign => 'Assign Team Members & Leaders',
 
             self::LeadsView => 'View Leads',
             self::LeadsCreate => 'Create Leads',

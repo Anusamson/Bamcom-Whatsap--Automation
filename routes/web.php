@@ -3,6 +3,8 @@
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\TeamController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserRoleAssignmentController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +32,15 @@ Route::middleware('auth')->group(function () {
     Route::resource('roles', RoleController::class);
     Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
     Route::patch('/users/{user}/roles', [UserRoleAssignmentController::class, 'update'])->name('users.roles.update');
+
+    // Users & Teams Module
+    Route::patch('/users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
+    Route::patch('/users/{user}/team', [UserController::class, 'assignTeam'])->name('users.assign-team');
+    Route::resource('users', UserController::class);
+
+    Route::post('/teams/{team}/members', [TeamController::class, 'assignMembers'])->name('teams.members.assign');
+    Route::delete('/teams/{team}/members/{user}', [TeamController::class, 'removeMember'])->name('teams.members.remove');
+    Route::resource('teams', TeamController::class);
 });
 
 require __DIR__.'/auth.php';

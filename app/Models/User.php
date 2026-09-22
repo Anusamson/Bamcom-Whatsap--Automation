@@ -8,19 +8,27 @@ use App\Enums\UserStatus;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'role', 'status'])]
+#[Fillable(['name', 'email', 'password', 'role', 'status', 'team_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, HasRoles, Notifiable;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     /**
      * Get the attributes that should be cast.
@@ -93,5 +101,139 @@ class User extends Authenticatable
     public function isSuperAdmin(): bool
     {
         return $this->hasRole(UserRole::SuperAdmin->value) || $this->role === UserRole::SuperAdmin;
+    }
+
+    /**
+     * The primary team assigned to the user (e.g. Sales Team).
+     */
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(Team::class);
+    }
+
+    /**
+     * All teams the user belongs to via team memberships.
+     */
+    public function teams(): BelongsToMany
+    {
+        return $this->belongsToMany(Team::class, 'team_user')
+            ->withPivot('role_in_team', 'joined_at')
+            ->withTimestamps();
+    }
+
+    /**
+     * Teams where this user is assigned as team leader.
+     */
+    public function ledTeams(): HasMany
+    {
+        return $this->hasMany(Team::class, 'leader_id');
+    }
+
+    /**
+     * Detailed user CRM profile information.
+     */
+    public function profile(): HasOne
+    {
+        return $this->hasOne(UserProfile::class);
+    }
+
+    /**
+     * Determine if the user has any recorded CRM activity.
+     * Users with recorded CRM activity cannot be permanently deleted.
+     */
+    public function hasCrmActivity(): bool
+    {
+        // 1. Leads management activity
+        if (Schema::hasTable('leads')) {
+            $hasLeadActivity = DB::table('leads')
+                ->where('user_id', $this->id)
+                ->orWhere('assigned_to', $this->id)
+                ->exists();
+            if ($hasLeadActivity) {
+                return true;
+            }
+        }
+
+        // 2. Customer relationship activity
+        if (Schema::hasTable('customers')) {
+            $hasCustomerActivity = DB::table('customers')
+                ->where('user_id', $this->id)
+                ->orWhere('assigned_to', $this->id)
+                ->exists();
+            if ($hasCustomerActivity) {
+                return true;
+            }
+        }
+
+        // 3. Support ticket activity
+        if (Schema::hasTable('tickets')) {
+            $hasTicketActivity = DB::table('tickets')
+                ->where('user_id', $this->id)
+                ->orWhere('assigned_to', $this->id)
+                ->exists();
+            if ($hasTicketActivity) {
+                return true;
+            }
+        }
+
+        // 4. Field inspection activity
+        if (Schema::hasTable('inspections')) {
+            $hasInspectionActivity = DB::table('inspections')
+                ->where('inspector_id', $this->id)
+                ->orWhere('user_id', $this->id)
+                ->exists();
+            if ($hasInspectionActivity) {
+                return true;
+            }
+        }
+
+        // 5. Team leadership activity
+        if ($this->ledTeams()->exists()) {
+            return true;
+        }
+
+        // 6. Dedicated CRM activity log records
+        if (Schema::hasTable('crm_activities')) {
+            $hasAuditActivity = DB::table('crm_activities')
+                ->where('user_id', $this->id)
+                ->exists();
+            if ($hasAuditActivity) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Disable the user account.
+     */
+    public function disable(): void
+    {
+        $this->update(['status' => UserStatus::Inactive]);
+    }
+
+    /**
+     * Activate the user account.
+     */
+    public function activate(): void
+    {
+        $this->update(['status' => UserStatus::Active]);
+    }
+
+    /**
+     * Determine if the user account is disabled or inactive.
+     */
+    public function isDisabled(): bool
+    {
+        return $this->status !== UserStatus::Active;
+    }
+
+    /**
+     * Scope query to only active users.
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', UserStatus::Active);
     }
 }
