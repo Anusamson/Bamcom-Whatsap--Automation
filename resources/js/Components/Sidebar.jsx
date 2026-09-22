@@ -10,7 +10,8 @@ import {
     Sparkles,
     UserCheck,
     Users,
-    UsersRound
+    UsersRound,
+    Contact
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -29,6 +30,14 @@ export default function Sidebar({
             icon: LayoutDashboard,
             badge: 'Live',
             badgeColor: 'bg-emerald-500 text-white',
+        },
+        {
+            name: 'CRM Contacts',
+            href: route('contacts.index'),
+            active: route().current('contacts.*'),
+            icon: Contact,
+            badge: 'Leads',
+            badgeColor: 'bg-indigo-600 text-white',
         },
         {
             name: 'Users Directory',

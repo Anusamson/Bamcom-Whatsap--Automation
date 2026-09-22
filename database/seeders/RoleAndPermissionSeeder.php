@@ -2,10 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ContactStatus;
+use App\Enums\LeadSource;
 use App\Enums\PermissionEnum;
 use App\Enums\TeamType;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use App\Models\Contact;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -58,6 +61,11 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionEnum::TeamsEdit->value,
             PermissionEnum::TeamsDelete->value,
             PermissionEnum::TeamsAssign->value,
+            PermissionEnum::ContactsView->value,
+            PermissionEnum::ContactsCreate->value,
+            PermissionEnum::ContactsEdit->value,
+            PermissionEnum::ContactsDelete->value,
+            PermissionEnum::ContactsAssign->value,
             PermissionEnum::LeadsView->value,
             PermissionEnum::LeadsCreate->value,
             PermissionEnum::LeadsEdit->value,
@@ -90,6 +98,11 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionEnum::UsersView->value,
             PermissionEnum::TeamsView->value,
             PermissionEnum::TeamsAssign->value,
+            PermissionEnum::ContactsView->value,
+            PermissionEnum::ContactsCreate->value,
+            PermissionEnum::ContactsEdit->value,
+            PermissionEnum::ContactsDelete->value,
+            PermissionEnum::ContactsAssign->value,
             PermissionEnum::LeadsView->value,
             PermissionEnum::LeadsCreate->value,
             PermissionEnum::LeadsEdit->value,
@@ -104,6 +117,9 @@ class RoleAndPermissionSeeder extends Seeder
 
         // 6. Sales Executive
         $roles[UserRole::SalesExecutive->value]->syncPermissions([
+            PermissionEnum::ContactsView->value,
+            PermissionEnum::ContactsCreate->value,
+            PermissionEnum::ContactsEdit->value,
             PermissionEnum::LeadsView->value,
             PermissionEnum::LeadsCreate->value,
             PermissionEnum::LeadsEdit->value,
@@ -113,6 +129,8 @@ class RoleAndPermissionSeeder extends Seeder
 
         // 7. Customer Support
         $roles[UserRole::CustomerSupport->value]->syncPermissions([
+            PermissionEnum::ContactsView->value,
+            PermissionEnum::ContactsEdit->value,
             PermissionEnum::TicketsView->value,
             PermissionEnum::TicketsCreate->value,
             PermissionEnum::TicketsReply->value,
@@ -123,6 +141,8 @@ class RoleAndPermissionSeeder extends Seeder
 
         // 8. Marketing
         $roles[UserRole::Marketing->value]->syncPermissions([
+            PermissionEnum::ContactsView->value,
+            PermissionEnum::ContactsCreate->value,
             PermissionEnum::CampaignsView->value,
             PermissionEnum::CampaignsCreate->value,
             PermissionEnum::CampaignsEdit->value,
@@ -133,6 +153,7 @@ class RoleAndPermissionSeeder extends Seeder
 
         // 9. Inspection Officer
         $roles[UserRole::InspectionOfficer->value]->syncPermissions([
+            PermissionEnum::ContactsView->value,
             PermissionEnum::InspectionsView->value,
             PermissionEnum::InspectionsCreate->value,
             PermissionEnum::InspectionsEdit->value,
@@ -144,6 +165,7 @@ class RoleAndPermissionSeeder extends Seeder
         $roles[UserRole::Management->value]->syncPermissions([
             PermissionEnum::UsersView->value,
             PermissionEnum::TeamsView->value,
+            PermissionEnum::ContactsView->value,
             PermissionEnum::ReportsView->value,
             PermissionEnum::ReportsExport->value,
             PermissionEnum::LeadsView->value,
@@ -320,6 +342,69 @@ class RoleAndPermissionSeeder extends Seeder
                 $inspectorUser->id => ['role_in_team' => 'leader', 'joined_at' => now()],
             ]);
             $inspectorUser->update(['team_id' => $inspectionTeam->id]);
+        }
+
+        // Seed Sample CRM Contacts
+        $sampleContacts = [
+            [
+                'first_name' => 'Adewale',
+                'last_name' => 'Adeyemi',
+                'phone' => '+2348021234567',
+                'email' => 'adewale.adeyemi@primeinvest.ng',
+                'location' => 'Ikoyi, Lagos',
+                'occupation' => 'Chief Investment Officer',
+                'preferred_language' => 'en',
+                'lead_source' => LeadSource::WhatsApp->value,
+                'assigned_user_id' => $salesExec?->id,
+                'status' => ContactStatus::Prospect->value,
+                'last_contact_at' => now()->subHours(4),
+            ],
+            [
+                'first_name' => 'Chioma',
+                'last_name' => 'Okonkwo',
+                'phone' => '+2348039876543',
+                'email' => 'chioma.okonkwo@capitalflow.com',
+                'location' => 'Victoria Island, Lagos',
+                'occupation' => 'Fintech Executive & Angel Investor',
+                'preferred_language' => 'en',
+                'lead_source' => LeadSource::Referral->value,
+                'assigned_user_id' => $salesManager?->id,
+                'status' => ContactStatus::Customer->value,
+                'last_contact_at' => now()->subDays(2),
+            ],
+            [
+                'first_name' => 'Babajide',
+                'last_name' => 'Sanusi',
+                'phone' => '+2348055551234',
+                'email' => 'babajide.sanusi@apexenergy.ng',
+                'location' => 'Maitama, Abuja',
+                'occupation' => 'Energy Consultant & Developer',
+                'preferred_language' => 'en',
+                'lead_source' => LeadSource::Website->value,
+                'assigned_user_id' => $salesExec?->id,
+                'status' => ContactStatus::Lead->value,
+                'last_contact_at' => now()->subHours(12),
+            ],
+            [
+                'first_name' => 'Fatima',
+                'last_name' => 'Bello',
+                'phone' => '+2348077778899',
+                'email' => 'fatima.bello@nordicexports.com',
+                'location' => 'Kano Municipal, Kano',
+                'occupation' => 'Agri-Tech Founder & Exporter',
+                'preferred_language' => 'ha',
+                'lead_source' => LeadSource::WhatsApp->value,
+                'assigned_user_id' => null,
+                'status' => ContactStatus::Lead->value,
+                'last_contact_at' => null,
+            ],
+        ];
+
+        foreach ($sampleContacts as $data) {
+            Contact::updateOrCreate(
+                ['phone' => $data['phone']],
+                $data
+            );
         }
     }
 }

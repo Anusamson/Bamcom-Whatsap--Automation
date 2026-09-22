@@ -26,6 +26,13 @@ enum PermissionEnum: string
     case TeamsDelete = 'teams.delete';
     case TeamsAssign = 'teams.assign';
 
+    // CRM Contacts Management
+    case ContactsView = 'contacts.view';
+    case ContactsCreate = 'contacts.create';
+    case ContactsEdit = 'contacts.edit';
+    case ContactsDelete = 'contacts.delete';
+    case ContactsAssign = 'contacts.assign';
+
     // CRM Leads Management
     case LeadsView = 'leads.view';
     case LeadsCreate = 'leads.create';
@@ -79,6 +86,9 @@ enum PermissionEnum: string
             self::TeamsView, self::TeamsCreate, self::TeamsEdit, self::TeamsDelete,
             self::TeamsAssign => 'Teams Management',
 
+            self::ContactsView, self::ContactsCreate, self::ContactsEdit, self::ContactsDelete,
+            self::ContactsAssign => 'CRM Contacts',
+
             self::LeadsView, self::LeadsCreate, self::LeadsEdit, self::LeadsDelete,
             self::LeadsAssign => 'Leads Management',
 
@@ -122,6 +132,12 @@ enum PermissionEnum: string
             self::TeamsEdit => 'Edit Teams',
             self::TeamsDelete => 'Delete Teams',
             self::TeamsAssign => 'Assign Team Members & Leaders',
+
+            self::ContactsView => 'View CRM Contacts',
+            self::ContactsCreate => 'Create CRM Contacts',
+            self::ContactsEdit => 'Edit CRM Contacts',
+            self::ContactsDelete => 'Delete CRM Contacts',
+            self::ContactsAssign => 'Assign Contacts to Reps',
 
             self::LeadsView => 'View Leads',
             self::LeadsCreate => 'Create Leads',

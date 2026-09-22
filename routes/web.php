@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleController;
@@ -41,6 +42,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/teams/{team}/members', [TeamController::class, 'assignMembers'])->name('teams.members.assign');
     Route::delete('/teams/{team}/members/{user}', [TeamController::class, 'removeMember'])->name('teams.members.remove');
     Route::resource('teams', TeamController::class);
+
+    // CRM Contacts Module
+    Route::patch('/contacts/{contact}/status', [ContactController::class, 'updateStatus'])->name('contacts.status');
+    Route::post('/contacts/{contact}/touchpoint', [ContactController::class, 'logTouchpoint'])->name('contacts.touchpoint');
+    Route::resource('contacts', ContactController::class);
 });
 
 require __DIR__.'/auth.php';

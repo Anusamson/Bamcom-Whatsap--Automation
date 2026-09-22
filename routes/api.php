@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -36,5 +37,8 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/teams/{team}/members', [TeamController::class, 'assignMembers'])->name('api.v1.teams.members.assign');
         Route::delete('/teams/{team}/members/{user}', [TeamController::class, 'removeMember'])->name('api.v1.teams.members.remove');
         Route::apiResource('teams', TeamController::class)->names('api.v1.teams');
+
+        // Contacts Management
+        Route::apiResource('contacts', ContactController::class)->names('api.v1.contacts');
     });
 });
