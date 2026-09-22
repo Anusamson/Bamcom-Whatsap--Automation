@@ -12,7 +12,8 @@ import {
     Users,
     UsersRound,
     Contact,
-    TrendingUp
+    TrendingUp,
+    Columns3
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -47,6 +48,14 @@ export default function Sidebar({
             icon: TrendingUp,
             badge: 'Deals',
             badgeColor: 'bg-amber-500 text-white',
+        },
+        {
+            name: 'Pipeline Kanban',
+            href: route('pipelines.index'),
+            active: route().current('pipelines.*'),
+            icon: Columns3,
+            badge: 'Kanban',
+            badgeColor: 'bg-indigo-500 text-white',
         },
         {
             name: 'Users Directory',

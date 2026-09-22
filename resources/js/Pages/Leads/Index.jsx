@@ -23,7 +23,9 @@ import {
     User,
     CheckCircle2,
     MessageSquare,
-    ExternalLink
+    ExternalLink,
+    Columns3,
+    List
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -133,15 +135,32 @@ export default function Index({ leads, filters, metrics, agents, statuses, tempe
                         </p>
                     </div>
 
-                    {can('leads.create') && (
-                        <Link
-                            href={route('leads.create')}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold rounded-xl shadow-sm transition"
-                        >
-                            <Plus className="h-4 w-4" />
-                            <span>Create Opportunity</span>
-                        </Link>
-                    )}
+                    <div className="flex items-center flex-wrap gap-2.5">
+                        {/* View Switcher: Board vs Table */}
+                        <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                            <Link
+                                href={route('pipelines.index')}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-medium rounded-lg transition"
+                            >
+                                <Columns3 className="h-3.5 w-3.5" />
+                                <span>Kanban</span>
+                            </Link>
+                            <span className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-bold rounded-lg shadow-sm">
+                                <List className="h-3.5 w-3.5" />
+                                <span>Table View</span>
+                            </span>
+                        </div>
+
+                        {can('leads.create') && (
+                            <Link
+                                href={route('leads.create')}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold rounded-xl shadow-sm transition"
+                            >
+                                <Plus className="h-4 w-4" />
+                                <span>Add Opportunity</span>
+                            </Link>
+                        )}
+                    </div>
                 </div>
             }
         >

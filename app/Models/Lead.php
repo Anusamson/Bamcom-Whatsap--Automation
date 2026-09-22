@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -22,6 +23,8 @@ use Illuminate\Support\Str;
  * @property int $id
  * @property string $uuid
  * @property int $contact_id
+ * @property ?int $pipeline_id
+ * @property ?int $pipeline_stage_id
  * @property ?int $assigned_user_id
  * @property string $title
  * @property LeadSource $lead_source
@@ -42,6 +45,8 @@ use Illuminate\Support\Str;
  * @property ?\Illuminate\Support\Carbon $updated_at
  * @property ?\Illuminate\Support\Carbon $deleted_at
  * @property-read Contact $contact
+ * @property-read ?Pipeline $pipeline
+ * @property-read ?PipelineStage $stage
  * @property-read ?User $assignedUser
  * @property-read string $formatted_budget
  * @property-read bool $is_hot
@@ -58,6 +63,8 @@ class Lead extends Model
     protected $fillable = [
         'uuid',
         'contact_id',
+        'pipeline_id',
+        'pipeline_stage_id',
         'assigned_user_id',
         'title',
         'lead_source',
@@ -132,6 +139,36 @@ class Lead extends Model
     public function assignedUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_user_id');
+    }
+
+    /**
+     * The assigned sales pipeline.
+     *
+     * @return BelongsTo<Pipeline, $this>
+     */
+    public function pipeline(): BelongsTo
+    {
+        return $this->belongsTo(Pipeline::class);
+    }
+
+    /**
+     * The current sales pipeline stage.
+     *
+     * @return BelongsTo<PipelineStage, $this>
+     */
+    public function stage(): BelongsTo
+    {
+        return $this->belongsTo(PipelineStage::class, 'pipeline_stage_id');
+    }
+
+    /**
+     * Audit trail and movement activities.
+     *
+     * @return HasMany<Activity, $this>
+     */
+    public function activities(): HasMany
+    {
+        return $this->hasMany(Activity::class)->latest();
     }
 
     /**

@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\LeadController;
+use App\Http\Controllers\Api\V1\PipelineController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
@@ -45,6 +46,11 @@ Route::prefix('v1')->group(function (): void {
         // Sales Leads Management
         Route::match(['post', 'patch'], '/leads/{lead}/status', [LeadController::class, 'updateStatus'])->name('api.v1.leads.status');
         Route::match(['post', 'patch'], '/leads/{lead}/assign', [LeadController::class, 'assign'])->name('api.v1.leads.assign');
+        Route::match(['post', 'patch'], '/leads/{lead}/stage', [PipelineController::class, 'moveStage'])->name('api.v1.leads.stage.move');
         Route::apiResource('leads', LeadController::class)->names('api.v1.leads');
+
+        // Sales Pipelines & Stages
+        Route::get('/pipelines', [PipelineController::class, 'index'])->name('api.v1.pipelines.index');
+        Route::get('/pipelines/{pipeline}', [PipelineController::class, 'show'])->name('api.v1.pipelines.show');
     });
 });

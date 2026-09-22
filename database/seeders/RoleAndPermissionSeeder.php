@@ -14,6 +14,8 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\Contact;
 use App\Models\Lead;
+use App\Models\Pipeline;
+use App\Models\PipelineStage;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -412,7 +414,49 @@ class RoleAndPermissionSeeder extends Seeder
             );
         }
 
-        // Seed Sample Sales Opportunities (Leads)
+        // 13. Seed Bamcom Sales Pipeline and 11 Pipeline Stages
+        $pipeline = Pipeline::updateOrCreate(
+            ['name' => 'Bamcom Sales Pipeline'],
+            [
+                'description' => 'Standard 11-stage real estate deal qualification, inspection, and transaction pipeline.',
+                'is_default' => true,
+                'is_active' => true,
+                'order_column' => 1,
+            ]
+        );
+
+        $stagesData = [
+            ['name' => 'New Lead', 'probability' => 10, 'color' => 'blue', 'is_won' => false, 'is_lost' => false],
+            ['name' => 'Contacted', 'probability' => 20, 'color' => 'indigo', 'is_won' => false, 'is_lost' => false],
+            ['name' => 'Qualified', 'probability' => 35, 'color' => 'sky', 'is_won' => false, 'is_lost' => false],
+            ['name' => 'Interested', 'probability' => 50, 'color' => 'violet', 'is_won' => false, 'is_lost' => false],
+            ['name' => 'Inspection Scheduled', 'probability' => 60, 'color' => 'amber', 'is_won' => false, 'is_lost' => false],
+            ['name' => 'Inspection Completed', 'probability' => 70, 'color' => 'orange', 'is_won' => false, 'is_lost' => false],
+            ['name' => 'Negotiation', 'probability' => 80, 'color' => 'purple', 'is_won' => false, 'is_lost' => false],
+            ['name' => 'Payment Pending', 'probability' => 90, 'color' => 'yellow', 'is_won' => false, 'is_lost' => false],
+            ['name' => 'Won', 'probability' => 100, 'color' => 'emerald', 'is_won' => true, 'is_lost' => false],
+            ['name' => 'Lost', 'probability' => 0, 'color' => 'rose', 'is_won' => false, 'is_lost' => true],
+            ['name' => 'Follow-up Later', 'probability' => 15, 'color' => 'slate', 'is_won' => false, 'is_lost' => false],
+        ];
+
+        $seededStages = [];
+        foreach ($stagesData as $index => $stageInfo) {
+            $seededStages[$stageInfo['name']] = PipelineStage::updateOrCreate(
+                [
+                    'pipeline_id' => $pipeline->id,
+                    'name' => $stageInfo['name'],
+                ],
+                [
+                    'order_column' => $index + 1,
+                    'color' => $stageInfo['color'],
+                    'probability' => $stageInfo['probability'],
+                    'is_won' => $stageInfo['is_won'],
+                    'is_lost' => $stageInfo['is_lost'],
+                ]
+            );
+        }
+
+        // 14. Seed Sample Sales Opportunities (Leads)
         $adewale = Contact::where('phone', '+2348021234567')->first();
         $chioma = Contact::where('phone', '+2348039876543')->first();
         $babajide = Contact::where('phone', '+2348055551234')->first();
@@ -423,6 +467,8 @@ class RoleAndPermissionSeeder extends Seeder
                 'title' => 'Lekki Phase 1 Luxury Waterfront Villa',
                 'contact_id' => $adewale?->id,
                 'assigned_user_id' => $salesExec?->id,
+                'pipeline_id' => $pipeline->id,
+                'pipeline_stage_id' => $seededStages['Negotiation']->id ?? null,
                 'lead_source' => LeadSource::WhatsApp->value,
                 'status' => LeadStatus::Negotiation->value,
                 'temperature' => LeadTemperature::Hot->value,
@@ -440,6 +486,8 @@ class RoleAndPermissionSeeder extends Seeder
                 'title' => 'Ikoyi High-Yield Commercial Office Floor',
                 'contact_id' => $chioma?->id,
                 'assigned_user_id' => $salesManager?->id,
+                'pipeline_id' => $pipeline->id,
+                'pipeline_stage_id' => $seededStages['Won']->id ?? null,
                 'lead_source' => LeadSource::Referral->value,
                 'status' => LeadStatus::Won->value,
                 'temperature' => LeadTemperature::Hot->value,
@@ -458,6 +506,8 @@ class RoleAndPermissionSeeder extends Seeder
                 'title' => 'Epe Mixed-Use Waterfront Development Acreage',
                 'contact_id' => $babajide?->id,
                 'assigned_user_id' => $salesExec?->id,
+                'pipeline_id' => $pipeline->id,
+                'pipeline_stage_id' => $seededStages['Inspection Completed']->id ?? null,
                 'lead_source' => LeadSource::Website->value,
                 'status' => LeadStatus::ProposalSent->value,
                 'temperature' => LeadTemperature::Warm->value,
@@ -475,6 +525,8 @@ class RoleAndPermissionSeeder extends Seeder
                 'title' => 'Maitama Luxury Duplex Exploration',
                 'contact_id' => $fatima?->id,
                 'assigned_user_id' => null,
+                'pipeline_id' => $pipeline->id,
+                'pipeline_stage_id' => $seededStages['New Lead']->id ?? null,
                 'lead_source' => LeadSource::WhatsApp->value,
                 'status' => LeadStatus::New->value,
                 'temperature' => LeadTemperature::Cold->value,

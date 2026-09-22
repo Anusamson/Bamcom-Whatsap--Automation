@@ -3,6 +3,7 @@
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TeamController;
@@ -52,7 +53,11 @@ Route::middleware('auth')->group(function () {
     // Sales Leads Module
     Route::match(['post', 'patch'], '/leads/{lead}/status', [LeadController::class, 'updateStatus'])->name('leads.status');
     Route::match(['post', 'patch'], '/leads/{lead}/assign', [LeadController::class, 'assign'])->name('leads.assign');
+    Route::match(['post', 'patch'], '/leads/{lead}/stage', [PipelineController::class, 'moveStage'])->name('leads.stage.move');
     Route::resource('leads', LeadController::class);
+
+    // Sales Pipelines & Kanban Board
+    Route::get('/pipelines', [PipelineController::class, 'index'])->name('pipelines.index');
 });
 
 require __DIR__.'/auth.php';
