@@ -4,11 +4,16 @@ namespace Database\Seeders;
 
 use App\Enums\ContactStatus;
 use App\Enums\LeadSource;
+use App\Enums\LeadStatus;
+use App\Enums\LeadTemperature;
 use App\Enums\PermissionEnum;
+use App\Enums\PurchaseTimeline;
+use App\Enums\QualificationStatus;
 use App\Enums\TeamType;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\Contact;
+use App\Models\Lead;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -405,6 +410,96 @@ class RoleAndPermissionSeeder extends Seeder
                 ['phone' => $data['phone']],
                 $data
             );
+        }
+
+        // Seed Sample Sales Opportunities (Leads)
+        $adewale = Contact::where('phone', '+2348021234567')->first();
+        $chioma = Contact::where('phone', '+2348039876543')->first();
+        $babajide = Contact::where('phone', '+2348055551234')->first();
+        $fatima = Contact::where('phone', '+2348077778899')->first();
+
+        $sampleLeads = [
+            [
+                'title' => 'Lekki Phase 1 Luxury Waterfront Villa',
+                'contact_id' => $adewale?->id,
+                'assigned_user_id' => $salesExec?->id,
+                'lead_source' => LeadSource::WhatsApp->value,
+                'status' => LeadStatus::Negotiation->value,
+                'temperature' => LeadTemperature::Hot->value,
+                'score' => 92,
+                'budget_min' => 120000000,
+                'budget_max' => 180000000,
+                'budget_range' => '₦120M - ₦180M',
+                'purchase_timeline' => PurchaseTimeline::Immediate->value,
+                'preferred_location' => 'Lekki Phase 1, Lagos',
+                'property_interest' => '5-Bedroom Fully Detached Luxury Waterfront Villa',
+                'qualification_status' => QualificationStatus::Qualified->value,
+                'notes' => 'Client verified bank guarantee ready. Negotiation on payment milestones.',
+            ],
+            [
+                'title' => 'Ikoyi High-Yield Commercial Office Floor',
+                'contact_id' => $chioma?->id,
+                'assigned_user_id' => $salesManager?->id,
+                'lead_source' => LeadSource::Referral->value,
+                'status' => LeadStatus::Won->value,
+                'temperature' => LeadTemperature::Hot->value,
+                'score' => 98,
+                'budget_min' => 250000000,
+                'budget_max' => 320000000,
+                'budget_range' => '₦250M - ₦320M',
+                'purchase_timeline' => PurchaseTimeline::Immediate->value,
+                'preferred_location' => 'Ikoyi, Lagos',
+                'property_interest' => 'Commercial Penthouse Floor with 12 Dedicated Parking Slots',
+                'qualification_status' => QualificationStatus::Qualified->value,
+                'notes' => 'Contract signed and initial 40% equity deposit received.',
+                'converted_at' => now()->subDays(2),
+            ],
+            [
+                'title' => 'Epe Mixed-Use Waterfront Development Acreage',
+                'contact_id' => $babajide?->id,
+                'assigned_user_id' => $salesExec?->id,
+                'lead_source' => LeadSource::Website->value,
+                'status' => LeadStatus::ProposalSent->value,
+                'temperature' => LeadTemperature::Warm->value,
+                'score' => 74,
+                'budget_min' => 60000000,
+                'budget_max' => 90000000,
+                'budget_range' => '₦60M - ₦90M',
+                'purchase_timeline' => PurchaseTimeline::OneToThreeMonths->value,
+                'preferred_location' => 'Epe, Lagos',
+                'property_interest' => '2 Acres Waterfront Land for Eco-Resort',
+                'qualification_status' => QualificationStatus::InReview->value,
+                'notes' => 'Survey plan and title verification documents delivered.',
+            ],
+            [
+                'title' => 'Maitama Luxury Duplex Exploration',
+                'contact_id' => $fatima?->id,
+                'assigned_user_id' => null,
+                'lead_source' => LeadSource::WhatsApp->value,
+                'status' => LeadStatus::New->value,
+                'temperature' => LeadTemperature::Cold->value,
+                'score' => 45,
+                'budget_min' => 150000000,
+                'budget_max' => 220000000,
+                'budget_range' => '₦150M - ₦220M',
+                'purchase_timeline' => PurchaseTimeline::Flexible->value,
+                'preferred_location' => 'Maitama, Abuja',
+                'property_interest' => '4-Bedroom Semi-Detached Duplex',
+                'qualification_status' => QualificationStatus::Unqualified->value,
+                'notes' => 'Initial inquiry via WhatsApp AI assistant.',
+            ],
+        ];
+
+        foreach ($sampleLeads as $leadData) {
+            if (! empty($leadData['contact_id'])) {
+                Lead::updateOrCreate(
+                    [
+                        'contact_id' => $leadData['contact_id'],
+                        'title' => $leadData['title'],
+                    ],
+                    $leadData
+                );
+            }
         }
     }
 }

@@ -146,6 +146,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Sales leads assigned to this user.
+     */
+    public function assignedLeads(): HasMany
+    {
+        return $this->hasMany(Lead::class, 'assigned_user_id');
+    }
+
+    /**
      * Determine if the user has any recorded CRM activity.
      * Users with recorded CRM activity cannot be permanently deleted.
      */
@@ -165,8 +173,8 @@ class User extends Authenticatable
         // 1. Leads management activity
         if (Schema::hasTable('leads')) {
             $hasLeadActivity = DB::table('leads')
-                ->where('user_id', $this->id)
-                ->orWhere('assigned_to', $this->id)
+                ->where('assigned_user_id', $this->id)
+                ->whereNull('deleted_at')
                 ->exists();
             if ($hasLeadActivity) {
                 return true;

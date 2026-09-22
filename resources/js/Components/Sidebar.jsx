@@ -11,7 +11,8 @@ import {
     UserCheck,
     Users,
     UsersRound,
-    Contact
+    Contact,
+    TrendingUp
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -36,8 +37,16 @@ export default function Sidebar({
             href: route('contacts.index'),
             active: route().current('contacts.*'),
             icon: Contact,
-            badge: 'Leads',
+            badge: 'Contacts',
             badgeColor: 'bg-indigo-600 text-white',
+        },
+        {
+            name: 'Sales Leads',
+            href: route('leads.index'),
+            active: route().current('leads.*'),
+            icon: TrendingUp,
+            badge: 'Deals',
+            badgeColor: 'bg-amber-500 text-white',
         },
         {
             name: 'Users Directory',

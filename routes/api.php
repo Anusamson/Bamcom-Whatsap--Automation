@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\LeadController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
@@ -40,5 +41,10 @@ Route::prefix('v1')->group(function (): void {
 
         // Contacts Management
         Route::apiResource('contacts', ContactController::class)->names('api.v1.contacts');
+
+        // Sales Leads Management
+        Route::match(['post', 'patch'], '/leads/{lead}/status', [LeadController::class, 'updateStatus'])->name('api.v1.leads.status');
+        Route::match(['post', 'patch'], '/leads/{lead}/assign', [LeadController::class, 'assign'])->name('api.v1.leads.assign');
+        Route::apiResource('leads', LeadController::class)->names('api.v1.leads');
     });
 });

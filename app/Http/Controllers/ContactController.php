@@ -115,7 +115,7 @@ class ContactController extends Controller
     {
         Gate::authorize('view', $contact);
 
-        $contact->load(['assignedUser.profile', 'assignedUser.team']);
+        $contact->load(['assignedUser.profile', 'assignedUser.team', 'leads.assignedUser']);
 
         $users = User::query()
             ->select('id', 'name', 'email', 'role')
