@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\DealController;
 use App\Http\Controllers\EstateController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PermissionController;
@@ -64,6 +65,13 @@ Route::middleware('auth')->group(function () {
     // Property Management & Estates
     Route::resource('estates', EstateController::class);
     Route::resource('properties', PropertyController::class);
+
+    // Sales Opportunities & Deals Module
+    Route::match(['post', 'patch'], '/deals/{deal}/won', [DealController::class, 'markWon'])->name('deals.won');
+    Route::match(['post', 'patch'], '/deals/{deal}/lost', [DealController::class, 'markLost'])->name('deals.lost');
+    Route::match(['post', 'patch'], '/deals/{deal}/reopen', [DealController::class, 'reopen'])->name('deals.reopen');
+    Route::resource('deals', DealController::class);
+    Route::get('/opportunities', fn () => redirect()->route('deals.index'))->name('opportunities.index');
 });
 
 require __DIR__.'/auth.php';

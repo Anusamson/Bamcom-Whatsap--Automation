@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ContactController;
+use App\Http\Controllers\Api\V1\DealController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\LeadController;
 use App\Http\Controllers\Api\V1\PipelineController;
@@ -59,5 +60,10 @@ Route::prefix('v1')->group(function (): void {
         // Sales Pipelines & Stages
         Route::get('/pipelines', [PipelineController::class, 'index'])->name('api.v1.pipelines.index');
         Route::get('/pipelines/{pipeline}', [PipelineController::class, 'show'])->name('api.v1.pipelines.show');
+
+        // Opportunities & Deals Management
+        Route::match(['post', 'patch'], '/deals/{deal}/won', [DealController::class, 'markWon'])->name('api.v1.deals.won');
+        Route::match(['post', 'patch'], '/deals/{deal}/lost', [DealController::class, 'markLost'])->name('api.v1.deals.lost');
+        Route::apiResource('deals', DealController::class)->names('api.v1.deals');
     });
 });

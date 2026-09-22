@@ -15,7 +15,8 @@ import {
     TrendingUp,
     Columns3,
     Building2,
-    MapPin
+    MapPin,
+    Handshake
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -48,7 +49,7 @@ export default function Sidebar({
             href: route('leads.index'),
             active: route().current('leads.*'),
             icon: TrendingUp,
-            badge: 'Deals',
+            badge: 'Leads',
             badgeColor: 'bg-amber-500 text-white',
         },
         {
@@ -58,6 +59,14 @@ export default function Sidebar({
             icon: Columns3,
             badge: 'Kanban',
             badgeColor: 'bg-indigo-500 text-white',
+        },
+        {
+            name: 'Deals & Opportunities',
+            href: route('deals.index'),
+            active: route().current('deals.*'),
+            icon: Handshake,
+            badge: 'Deals',
+            badgeColor: 'bg-emerald-600 text-white',
         },
         {
             name: 'Properties',

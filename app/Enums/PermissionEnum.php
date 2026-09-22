@@ -74,6 +74,12 @@ enum PermissionEnum: string
     case PropertiesEdit = 'properties.edit';
     case PropertiesDelete = 'properties.delete';
 
+    // Opportunities & Deals Management
+    case DealsView = 'deals.view';
+    case DealsCreate = 'deals.create';
+    case DealsEdit = 'deals.edit';
+    case DealsDelete = 'deals.delete';
+
     // System Settings & Maintenance
     case SettingsView = 'settings.view';
     case SettingsEdit = 'settings.edit';
@@ -112,6 +118,9 @@ enum PermissionEnum: string
 
             self::PropertiesView, self::PropertiesCreate, self::PropertiesEdit,
             self::PropertiesDelete => 'Property Management',
+
+            self::DealsView, self::DealsCreate, self::DealsEdit,
+            self::DealsDelete => 'Opportunities & Deals',
 
             self::ReportsView, self::ReportsExport => 'Reports & Analytics',
 
@@ -178,6 +187,11 @@ enum PermissionEnum: string
             self::PropertiesCreate => 'Create Properties & Estates',
             self::PropertiesEdit => 'Edit Properties & Estates',
             self::PropertiesDelete => 'Delete Properties & Estates',
+
+            self::DealsView => 'View Deals & Opportunities',
+            self::DealsCreate => 'Create Deals & Opportunities',
+            self::DealsEdit => 'Edit Deals & Opportunities',
+            self::DealsDelete => 'Delete Deals & Opportunities',
 
             self::ReportsView => 'View Analytical Reports',
             self::ReportsExport => 'Export Report Datasets',

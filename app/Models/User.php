@@ -154,6 +154,26 @@ class User extends Authenticatable
     }
 
     /**
+     * Deals and opportunities assigned to this sales representative.
+     *
+     * @return HasMany<Deal, $this>
+     */
+    public function assignedDeals(): HasMany
+    {
+        return $this->hasMany(Deal::class, 'assigned_user_id');
+    }
+
+    /**
+     * Alias for assignedDeals.
+     *
+     * @return HasMany<Deal, $this>
+     */
+    public function deals(): HasMany
+    {
+        return $this->assignedDeals();
+    }
+
+    /**
      * Determine if the user has any recorded CRM activity.
      * Users with recorded CRM activity cannot be permanently deleted.
      */

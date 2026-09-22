@@ -158,13 +158,23 @@ class Property extends Model
     }
 
     /**
-     * Associated sales leads/deals.
+     * Associated sales leads.
      *
      * @return HasMany<Lead, $this>
      */
     public function leads(): HasMany
     {
         return $this->hasMany(Lead::class);
+    }
+
+    /**
+     * Associated deals and opportunities.
+     *
+     * @return HasMany<Deal, $this>
+     */
+    public function deals(): HasMany
+    {
+        return $this->hasMany(Deal::class)->latest();
     }
 
     /**

@@ -129,6 +129,26 @@ class Contact extends Model
     }
 
     /**
+     * Deals and financial opportunities associated with this contact.
+     *
+     * @return HasMany<Deal, $this>
+     */
+    public function deals(): HasMany
+    {
+        return $this->hasMany(Deal::class)->latest();
+    }
+
+    /**
+     * Alias for deals.
+     *
+     * @return HasMany<Deal, $this>
+     */
+    public function opportunities(): HasMany
+    {
+        return $this->deals();
+    }
+
+    /**
      * Compute full name.
      */
     protected function fullName(): Attribute

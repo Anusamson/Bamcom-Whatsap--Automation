@@ -185,6 +185,16 @@ class Lead extends Model
     }
 
     /**
+     * Associated deals and opportunities.
+     *
+     * @return HasMany<Deal, $this>
+     */
+    public function deals(): HasMany
+    {
+        return $this->hasMany(Deal::class)->latest();
+    }
+
+    /**
      * Formatted budget string with Nigerian Naira (₦) symbol.
      */
     protected function formattedBudget(): Attribute

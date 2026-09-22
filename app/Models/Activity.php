@@ -28,6 +28,7 @@ class Activity extends Model
         'uuid',
         'user_id',
         'lead_id',
+        'deal_id',
         'activity_type',
         'description',
         'properties',
@@ -67,5 +68,15 @@ class Activity extends Model
     public function lead(): BelongsTo
     {
         return $this->belongsTo(Lead::class);
+    }
+
+    /**
+     * The associated deal / opportunity.
+     *
+     * @return BelongsTo<Deal, $this>
+     */
+    public function deal(): BelongsTo
+    {
+        return $this->belongsTo(Deal::class);
     }
 }
