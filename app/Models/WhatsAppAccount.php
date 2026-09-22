@@ -93,6 +93,16 @@ class WhatsAppAccount extends Model
     }
 
     /**
+     * Conversations routed through this WhatsApp Account line.
+     *
+     * @return HasMany<Conversation, $this>
+     */
+    public function conversations(): HasMany
+    {
+        return $this->hasMany(Conversation::class, 'whatsapp_account_id');
+    }
+
+    /**
      * Scope: Only accounts currently marked as connected.
      *
      * @param  Builder<self>  $query

@@ -2,10 +2,12 @@
 
 namespace Tests\Feature\WhatsApp;
 
+use App\Jobs\ProcessWhatsAppWebhook;
 use App\Models\WhatsAppAccount;
 use App\Models\WhatsAppWebhookEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class WhatsAppWebhookTest extends TestCase
@@ -44,6 +46,8 @@ class WhatsAppWebhookTest extends TestCase
 
     public function test_webhook_post_receives_and_records_message_event(): void
     {
+        Queue::fake();
+
         $account = WhatsAppAccount::factory()->create([
             'phone_number_id' => '109876543210',
         ]);
@@ -104,10 +108,16 @@ class WhatsAppWebhookTest extends TestCase
         $event = WhatsAppWebhookEvent::latest('id')->first();
         $this->assertNotNull($event);
         $this->assertEquals('wamid.HBgLMjM0ODAzOTg3NjU0MwUCMRIA', $event->meta_event_id);
+
+        Queue::assertPushed(ProcessWhatsAppWebhook::class, function ($job) use ($event) {
+            return $job->event->id === $event->id;
+        });
     }
 
     public function test_webhook_post_records_failed_status_when_signature_is_invalid(): void
     {
+        Queue::fake();
+
         $payload = ['object' => 'whatsapp_business_account', 'entry' => []];
 
         $response = $this->withHeaders([
@@ -121,5 +131,7 @@ class WhatsAppWebhookTest extends TestCase
             'status' => 'failed',
             'error_message' => 'Invalid HMAC-SHA256 signature',
         ]);
+
+        Queue::assertNotPushed(ProcessWhatsAppWebhook::class);
     }
 }

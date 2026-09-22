@@ -2,9 +2,14 @@
 
 namespace App\Services\WhatsApp;
 
+use App\Enums\MessageDeliveryStatus;
 use App\Models\Activity;
 use App\Models\Contact;
+use App\Models\Message;
 use App\Models\User;
+use App\Models\WhatsAppAccount;
+use App\Models\WhatsAppMessage;
+use App\Services\Conversation\ConversationService;
 use Exception;
 use Illuminate\Support\Facades\Log;
 
@@ -31,6 +36,46 @@ class WhatsAppMessageService
             $response = $this->client->sendTextMessage($normalizedPhone, $body);
 
             $messageId = $response['messages'][0]['id'] ?? null;
+
+            if ($messageId) {
+                $account = WhatsAppAccount::default()->first();
+                WhatsAppMessage::create([
+                    'whatsapp_account_id' => $account?->id,
+                    'contact_id' => $contact?->id,
+                    'meta_message_id' => $messageId,
+                    'direction' => 'outbound',
+                    'sender_phone' => $account?->display_phone_number ?: (string) config('whatsapp.phone_number_id', 'Bamcom'),
+                    'recipient_phone' => $normalizedPhone,
+                    'message_type' => 'text',
+                    'body' => $body,
+                    'status' => 'sent',
+                    'payload' => $response,
+                    'sent_at' => now(),
+                ]);
+
+                if ($contact && ! Message::where('meta_message_id', $messageId)->exists()) {
+                    /** @var ConversationService $convService */
+                    $convService = app(ConversationService::class);
+                    $conversation = $convService->findOrCreateActiveConversation($contact, $account?->id);
+                    Message::create([
+                        'conversation_id' => $conversation->id,
+                        'contact_id' => $contact->id,
+                        'sender_type' => $sender ? 'user' : 'system',
+                        'sender_id' => $sender?->id,
+                        'meta_message_id' => $messageId,
+                        'direction' => 'outbound',
+                        'sender_phone' => $account?->display_phone_number ?: (string) config('whatsapp.phone_number_id', 'Bamcom'),
+                        'recipient_phone' => $normalizedPhone,
+                        'type' => 'text',
+                        'body' => $body,
+                        'delivery_status' => MessageDeliveryStatus::Sent,
+                        'is_read' => false,
+                        'sent_at' => now(),
+                        'payload' => $response,
+                    ]);
+                    $conversation->update(['last_message_at' => now()]);
+                }
+            }
 
             if ($contact) {
                 $contact->touchLastContact();
@@ -93,6 +138,48 @@ class WhatsAppMessageService
             );
 
             $messageId = $response['messages'][0]['id'] ?? null;
+
+            if ($messageId) {
+                $account = WhatsAppAccount::default()->first();
+                $bodyText = "Template: {$templateName}".(! empty($bodyParameters) ? ' ('.implode(', ', $bodyParameters).')' : '');
+
+                WhatsAppMessage::create([
+                    'whatsapp_account_id' => $account?->id,
+                    'contact_id' => $contact?->id,
+                    'meta_message_id' => $messageId,
+                    'direction' => 'outbound',
+                    'sender_phone' => $account?->display_phone_number ?: (string) config('whatsapp.phone_number_id', 'Bamcom'),
+                    'recipient_phone' => $normalizedPhone,
+                    'message_type' => 'template',
+                    'body' => $bodyText,
+                    'status' => 'sent',
+                    'payload' => $response,
+                    'sent_at' => now(),
+                ]);
+
+                if ($contact && ! Message::where('meta_message_id', $messageId)->exists()) {
+                    /** @var ConversationService $convService */
+                    $convService = app(ConversationService::class);
+                    $conversation = $convService->findOrCreateActiveConversation($contact, $account?->id);
+                    Message::create([
+                        'conversation_id' => $conversation->id,
+                        'contact_id' => $contact->id,
+                        'sender_type' => $sender ? 'user' : 'system',
+                        'sender_id' => $sender?->id,
+                        'meta_message_id' => $messageId,
+                        'direction' => 'outbound',
+                        'sender_phone' => $account?->display_phone_number ?: (string) config('whatsapp.phone_number_id', 'Bamcom'),
+                        'recipient_phone' => $normalizedPhone,
+                        'type' => 'template',
+                        'body' => $bodyText,
+                        'delivery_status' => MessageDeliveryStatus::Sent,
+                        'is_read' => false,
+                        'sent_at' => now(),
+                        'payload' => $response,
+                    ]);
+                    $conversation->update(['last_message_at' => now()]);
+                }
+            }
 
             if ($contact) {
                 $contact->touchLastContact();

@@ -85,6 +85,12 @@ enum PermissionEnum: string
     case WhatsAppManage = 'whatsapp.manage';
     case WhatsAppSend = 'whatsapp.send';
 
+    // Conversations & Messages
+    case ConversationsView = 'conversations.view';
+    case ConversationsManage = 'conversations.manage';
+    case ConversationsAssign = 'conversations.assign';
+    case MessagesSend = 'messages.send';
+
     // System Settings & Maintenance
     case SettingsView = 'settings.view';
     case SettingsEdit = 'settings.edit';
@@ -131,6 +137,9 @@ enum PermissionEnum: string
 
             self::WhatsAppView, self::WhatsAppManage,
             self::WhatsAppSend => 'WhatsApp Management',
+
+            self::ConversationsView, self::ConversationsManage,
+            self::ConversationsAssign, self::MessagesSend => 'Conversations & Messaging',
 
             self::SettingsView, self::SettingsEdit, self::SystemHealth => 'System Settings',
         };
@@ -207,6 +216,11 @@ enum PermissionEnum: string
             self::WhatsAppView => 'View WhatsApp Settings & Accounts',
             self::WhatsAppManage => 'Manage WhatsApp Connection & Templates',
             self::WhatsAppSend => 'Send WhatsApp Outbound Messages',
+
+            self::ConversationsView => 'View Conversations & History',
+            self::ConversationsManage => 'Manage Conversation Status & Mode',
+            self::ConversationsAssign => 'Assign Conversations to Reps',
+            self::MessagesSend => 'Send Messages in Conversations',
 
             self::SettingsView => 'View System Settings',
             self::SettingsEdit => 'Modify System Settings',

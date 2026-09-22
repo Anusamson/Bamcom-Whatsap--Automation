@@ -164,6 +164,16 @@ class User extends Authenticatable
     }
 
     /**
+     * Conversations assigned to this user/agent.
+     *
+     * @return HasMany<Conversation, $this>
+     */
+    public function assignedConversations(): HasMany
+    {
+        return $this->hasMany(Conversation::class, 'assigned_user_id');
+    }
+
+    /**
      * Alias for assignedDeals.
      *
      * @return HasMany<Deal, $this>

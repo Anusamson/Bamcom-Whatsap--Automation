@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessWhatsAppWebhook;
 use App\Models\WhatsAppAccount;
 use App\Models\WhatsAppWebhookEvent;
 use App\Services\WhatsApp\WhatsAppClient;
@@ -51,7 +52,11 @@ class WhatsAppWebhookController extends Controller
         $signature = $request->header('X-Hub-Signature-256');
         $rawPayload = $request->getContent();
 
-        $isValidSignature = empty($signature) || $this->client->verifyWebhookSignature($rawPayload, $signature);
+        $appSecret = config('whatsapp.app_secret');
+        $isValidSignature = true;
+        if (! empty($appSecret) || ! empty($signature)) {
+            $isValidSignature = ! empty($signature) && $this->client->verifyWebhookSignature($rawPayload, $signature);
+        }
 
         $payload = $request->all();
 
@@ -82,7 +87,7 @@ class WhatsAppWebhookController extends Controller
         }
 
         // Store webhook event for audit trail
-        WhatsAppWebhookEvent::create([
+        $event = WhatsAppWebhookEvent::create([
             'whatsapp_account_id' => $account?->id,
             'event_type' => $field,
             'meta_event_id' => $metaEventId,
@@ -97,6 +102,11 @@ class WhatsAppWebhookController extends Controller
             'status' => $isValidSignature ? 'pending' : 'failed',
             'error_message' => $isValidSignature ? null : 'Invalid HMAC-SHA256 signature',
         ]);
+
+        // Dispatch queued background processing only if signature is valid
+        if ($isValidSignature) {
+            ProcessWhatsAppWebhook::dispatch($event);
+        }
 
         return response()->json(['status' => 'received'], 200);
     }

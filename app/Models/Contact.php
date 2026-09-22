@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ContactStatus;
+use App\Enums\ConversationStatus;
 use App\Enums\LeadSource;
 use App\Services\Contact\PhoneNormalizerService;
 use Illuminate\Database\Eloquent\Builder;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -146,6 +148,48 @@ class Contact extends Model
     public function opportunities(): HasMany
     {
         return $this->deals();
+    }
+
+    /**
+     * WhatsApp messages associated with this contact.
+     *
+     * @return HasMany<WhatsAppMessage, $this>
+     */
+    public function whatsappMessages(): HasMany
+    {
+        return $this->hasMany(WhatsAppMessage::class)->latest();
+    }
+
+    /**
+     * All conversations for this contact.
+     *
+     * @return HasMany<Conversation, $this>
+     */
+    public function conversations(): HasMany
+    {
+        return $this->hasMany(Conversation::class)->latest('last_message_at');
+    }
+
+    /**
+     * Active (open or pending) conversation for this contact.
+     *
+     * @return HasOne<Conversation, $this>
+     */
+    public function activeConversation(): HasOne
+    {
+        return $this->hasOne(Conversation::class)
+            ->whereIn('status', [ConversationStatus::Open->value, ConversationStatus::Pending->value])
+            ->latest('last_message_at');
+    }
+
+    /**
+     * All messages across all conversations for this contact.
+     *
+     * @return HasMany<Message, $this>
+     */
+    public function messages(): HasMany
+    {
+        return $this->hasMany(Message::class)->latest();
     }
 
     /**

@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ContactController;
+use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\DealController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\LeadController;
+use App\Http\Controllers\Api\V1\MessageController;
 use App\Http\Controllers\Api\V1\PipelineController;
 use App\Http\Controllers\Api\V1\PropertyController;
 use App\Http\Controllers\Api\V1\TeamController;
@@ -70,5 +72,17 @@ Route::prefix('v1')->group(function (): void {
         Route::match(['post', 'patch'], '/deals/{deal}/won', [DealController::class, 'markWon'])->name('api.v1.deals.won');
         Route::match(['post', 'patch'], '/deals/{deal}/lost', [DealController::class, 'markLost'])->name('api.v1.deals.lost');
         Route::apiResource('deals', DealController::class)->names('api.v1.deals');
+
+        // Conversations & Customer Messaging
+        Route::patch('/conversations/{conversation}/mode', [ConversationController::class, 'updateMode'])->name('api.v1.conversations.mode');
+        Route::patch('/conversations/{conversation}/status', [ConversationController::class, 'updateStatus'])->name('api.v1.conversations.status');
+        Route::patch('/conversations/{conversation}/assign', [ConversationController::class, 'assign'])->name('api.v1.conversations.assign');
+        Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead'])->name('api.v1.conversations.read');
+        Route::get('/contacts/{contact}/conversations', [ConversationController::class, 'byContact'])->name('api.v1.contacts.conversations');
+        Route::apiResource('conversations', ConversationController::class)->except(['destroy'])->names('api.v1.conversations');
+
+        // Conversation Messages
+        Route::get('/conversations/{conversation}/messages', [MessageController::class, 'index'])->name('api.v1.conversations.messages.index');
+        Route::post('/conversations/{conversation}/messages', [MessageController::class, 'store'])->name('api.v1.conversations.messages.store');
     });
 });
