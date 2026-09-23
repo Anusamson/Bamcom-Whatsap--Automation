@@ -19,6 +19,11 @@ class ToolRegistry
      */
     protected array $tools = [];
 
+    /**
+     * @var array<string, string>
+     */
+    protected array $aliases = [];
+
     public function __construct(array $initialTools = [])
     {
         foreach ($initialTools as $tool) {
@@ -37,11 +42,23 @@ class ToolRegistry
     }
 
     /**
-     * Retrieve tool by name.
+     * Register an alias for a registered tool name.
+     */
+    public function registerAlias(string $alias, string $targetToolName): self
+    {
+        $this->aliases[$alias] = $targetToolName;
+
+        return $this;
+    }
+
+    /**
+     * Retrieve tool by name or alias.
      */
     public function get(string $name): ?AIToolInterface
     {
-        return $this->tools[$name] ?? null;
+        $target = $this->aliases[$name] ?? $name;
+
+        return $this->tools[$target] ?? null;
     }
 
     /**
@@ -49,7 +66,9 @@ class ToolRegistry
      */
     public function has(string $name): bool
     {
-        return isset($this->tools[$name]);
+        $target = $this->aliases[$name] ?? $name;
+
+        return isset($this->tools[$target]);
     }
 
     /**

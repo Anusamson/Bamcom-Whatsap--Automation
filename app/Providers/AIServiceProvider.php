@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\AI\AIOrchestrator;
+use App\Services\AI\BamcomSalesAgent;
 use App\Services\AI\ContextBuilder;
 use App\Services\AI\Contracts\AIProviderInterface;
 use App\Services\AI\IntentClassifier;
@@ -10,11 +11,17 @@ use App\Services\AI\KnowledgeService;
 use App\Services\AI\Providers\GeminiProvider;
 use App\Services\AI\Providers\MockAIProvider;
 use App\Services\AI\Providers\OpenAIProvider;
-use App\Services\AI\Tools\BookInspectionTool;
-use App\Services\AI\Tools\CalculatePaymentPlanTool;
-use App\Services\AI\Tools\EscalateToHumanTool;
-use App\Services\AI\Tools\SearchInventoryTool;
+use App\Services\AI\Tools\CheckAvailabilityTool;
+use App\Services\AI\Tools\CreateSalesTaskTool;
+use App\Services\AI\Tools\GetContactProfileTool;
+use App\Services\AI\Tools\GetPaymentPlanTool;
+use App\Services\AI\Tools\GetPropertyDetailsTool;
+use App\Services\AI\Tools\GetPropertyPriceTool;
+use App\Services\AI\Tools\RequestHumanHandoverTool;
+use App\Services\AI\Tools\ScheduleInspectionTool;
+use App\Services\AI\Tools\SearchPropertiesTool;
 use App\Services\AI\Tools\ToolRegistry;
+use App\Services\AI\Tools\UpdateLeadQualificationTool;
 use App\Services\Property\PropertyIntelligenceService;
 use Illuminate\Support\ServiceProvider;
 
@@ -25,15 +32,28 @@ class AIServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // 1. Register ToolRegistry with whitelisted domain tools
+        // 1. Register ToolRegistry with the 10 controlled application tools
         $this->app->singleton(ToolRegistry::class, function ($app): ToolRegistry {
             $registry = new ToolRegistry;
             $propertyIntelligence = $app->make(PropertyIntelligenceService::class);
 
-            $registry->register(new SearchInventoryTool($propertyIntelligence));
-            $registry->register(new BookInspectionTool);
-            $registry->register(new EscalateToHumanTool);
-            $registry->register(new CalculatePaymentPlanTool);
+            // The 10 Controlled Tools
+            $registry->register(new SearchPropertiesTool($propertyIntelligence));
+            $registry->register(new GetPropertyDetailsTool($propertyIntelligence));
+            $registry->register(new GetPropertyPriceTool);
+            $registry->register(new GetPaymentPlanTool);
+            $registry->register(new CheckAvailabilityTool);
+            $registry->register(new GetContactProfileTool);
+            $registry->register(new UpdateLeadQualificationTool);
+            $registry->register(new ScheduleInspectionTool);
+            $registry->register(new CreateSalesTaskTool);
+            $registry->register(new RequestHumanHandoverTool);
+
+            // Backward-compatible aliases for legacy tool names
+            $registry->registerAlias('search_inventory', 'searchProperties');
+            $registry->registerAlias('book_inspection', 'scheduleInspection');
+            $registry->registerAlias('calculate_payment_plan', 'getPaymentPlan');
+            $registry->registerAlias('escalate_to_human', 'requestHumanHandover');
 
             return $registry;
         });
@@ -72,6 +92,16 @@ class AIServiceProvider extends ServiceProvider
                 intentClassifier: $app->make(IntentClassifier::class),
                 knowledgeService: $app->make(KnowledgeService::class),
                 toolRegistry: $app->make(ToolRegistry::class)
+            );
+        });
+
+        // 7. Register Autonomous BamcomSalesAgent
+        $this->app->singleton(BamcomSalesAgent::class, function ($app): BamcomSalesAgent {
+            return new BamcomSalesAgent(
+                provider: $app->make(AIProviderInterface::class),
+                toolRegistry: $app->make(ToolRegistry::class),
+                knowledgeService: $app->make(KnowledgeService::class),
+                contextBuilder: $app->make(ContextBuilder::class)
             );
         });
     }

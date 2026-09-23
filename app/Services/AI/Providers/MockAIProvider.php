@@ -19,6 +19,13 @@ class MockAIProvider implements AIProviderInterface
     protected ?Closure $customResponseResolver = null;
 
     /**
+     * Queue of deterministic responses for tests.
+     *
+     * @var list<AIResponse>
+     */
+    protected array $queuedResponses = [];
+
+    /**
      * Recorded prompts received for test assertions.
      *
      * @var list<array<int, array{role: string, content: string}>>
@@ -39,9 +46,33 @@ class MockAIProvider implements AIProviderInterface
         return $this;
     }
 
+    /**
+     * Set the next response to be returned by generateResponse.
+     */
+    public function setNextResponse(AIResponse $response): self
+    {
+        $this->queuedResponses = [$response];
+
+        return $this;
+    }
+
+    /**
+     * Queue a subsequent response for multi-turn tool calling tests.
+     */
+    public function setFollowupResponse(AIResponse $response): self
+    {
+        $this->queuedResponses[] = $response;
+
+        return $this;
+    }
+
     public function generateResponse(array $messages, array $options = []): AIResponse
     {
         $this->recordedPromptHistory[] = $messages;
+
+        if (! empty($this->queuedResponses)) {
+            return array_shift($this->queuedResponses);
+        }
 
         if ($this->customResponseResolver) {
             return ($this->customResponseResolver)($messages, $options);
