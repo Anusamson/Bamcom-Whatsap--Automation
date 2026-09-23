@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Listeners\AutomationEventSubscriber;
 use App\Models\User;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -28,5 +30,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::before(function (User $user, string $ability): ?bool {
             return $user->isSuperAdmin() ? true : null;
         });
+
+        // Register CRM Event-Driven Automation Subscriber
+        Event::subscribe(AutomationEventSubscriber::class);
     }
 }

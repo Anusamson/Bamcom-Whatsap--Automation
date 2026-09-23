@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -390,5 +391,57 @@ class Lead extends Model
     public function inspections(): HasMany
     {
         return $this->hasMany(Inspection::class)->latest('inspection_date');
+    }
+
+    /**
+     * Tags assigned to this lead.
+     */
+    public function tags(): MorphToMany
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
+    }
+
+    /**
+     * Attach a tag by name or Tag model.
+     */
+    public function attachTag(Tag|string $tag): self
+    {
+        $tagModel = is_string($tag)
+            ? Tag::firstOrCreate(['name' => trim($tag)], ['slug' => Str::slug($tag)])
+            : $tag;
+
+        $this->tags()->syncWithoutDetaching([$tagModel->id]);
+
+        return $this;
+    }
+
+    /**
+     * Detach a tag by name or Tag model.
+     */
+    public function detachTag(Tag|string $tag): self
+    {
+        if (is_string($tag)) {
+            $tagModel = Tag::where('name', trim($tag))->orWhere('slug', Str::slug($tag))->first();
+            if ($tagModel) {
+                $this->tags()->detach($tagModel->id);
+            }
+        } else {
+            $this->tags()->detach($tag->id);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Check if lead has specific tag.
+     */
+    public function hasTag(Tag|string $tag): bool
+    {
+        $name = is_string($tag) ? trim($tag) : $tag->name;
+        $slug = Str::slug($name);
+
+        return $this->tags->contains(function (Tag $t) use ($name, $slug): bool {
+            return strcasecmp($t->name, $name) === 0 || $t->slug === $slug;
+        });
     }
 }
