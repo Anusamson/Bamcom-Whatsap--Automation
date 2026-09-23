@@ -20,7 +20,8 @@ import {
     MessageSquare,
     BookOpen,
     Flame,
-    CalendarCheck
+    CalendarCheck,
+    CheckSquare
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -71,6 +72,14 @@ export default function Sidebar({
             icon: TrendingUp,
             badge: 'Leads',
             badgeColor: 'bg-amber-500 text-white',
+        },
+        {
+            name: 'Tasks & Reminders',
+            href: route('tasks.index'),
+            active: route().current('tasks.*'),
+            icon: CheckSquare,
+            badge: 'Tasks',
+            badgeColor: 'bg-blue-600 text-white',
         },
         {
             name: 'Lead Scoring',

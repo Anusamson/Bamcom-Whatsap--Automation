@@ -205,6 +205,26 @@ class Lead extends Model
     }
 
     /**
+     * CRM tasks associated with this lead.
+     *
+     * @return HasMany<Task, $this>
+     */
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class)->latest('due_at');
+    }
+
+    /**
+     * Notes recorded for this lead.
+     *
+     * @return HasMany<Note, $this>
+     */
+    public function notes(): HasMany
+    {
+        return $this->hasMany(Note::class)->priorityOrder();
+    }
+
+    /**
      * Formatted budget string with Nigerian Naira (₦) symbol.
      */
     protected function formattedBudget(): Attribute

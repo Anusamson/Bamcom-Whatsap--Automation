@@ -194,6 +194,36 @@ class User extends Authenticatable
     }
 
     /**
+     * Tasks assigned to this user.
+     *
+     * @return HasMany<Task, $this>
+     */
+    public function assignedTasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'assigned_user_id');
+    }
+
+    /**
+     * Tasks created by this user.
+     *
+     * @return HasMany<Task, $this>
+     */
+    public function createdTasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'created_by_id');
+    }
+
+    /**
+     * Notes authored by this user.
+     *
+     * @return HasMany<Note, $this>
+     */
+    public function notes(): HasMany
+    {
+        return $this->hasMany(Note::class, 'user_id');
+    }
+
+    /**
      * Determine if the user has any recorded CRM activity.
      * Users with recorded CRM activity cannot be permanently deleted.
      */
@@ -253,6 +283,20 @@ class User extends Authenticatable
                 ->whereNull('deleted_at')
                 ->exists();
             if ($hasInspectionActivity) {
+                return true;
+            }
+        }
+
+        // 4b. Tasks activity
+        if (Schema::hasTable('tasks')) {
+            $hasTaskActivity = DB::table('tasks')
+                ->where(function ($q): void {
+                    $q->where('assigned_user_id', $this->id)
+                        ->orWhere('created_by_id', $this->id);
+                })
+                ->whereNull('deleted_at')
+                ->exists();
+            if ($hasTaskActivity) {
                 return true;
             }
         }

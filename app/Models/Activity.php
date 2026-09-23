@@ -14,11 +14,15 @@ use Illuminate\Support\Str;
  * @property string $uuid
  * @property ?int $user_id
  * @property ?int $lead_id
+ * @property ?int $deal_id
+ * @property ?int $contact_id
  * @property string $activity_type
  * @property string $description
  * @property ?array<string, mixed> $properties
  * @property-read ?User $user
  * @property-read ?Lead $lead
+ * @property-read ?Deal $deal
+ * @property-read ?Contact $contact
  */
 class Activity extends Model
 {
@@ -29,6 +33,7 @@ class Activity extends Model
         'user_id',
         'lead_id',
         'deal_id',
+        'contact_id',
         'activity_type',
         'description',
         'properties',
@@ -78,5 +83,15 @@ class Activity extends Model
     public function deal(): BelongsTo
     {
         return $this->belongsTo(Deal::class);
+    }
+
+    /**
+     * The associated contact.
+     *
+     * @return BelongsTo<Contact, $this>
+     */
+    public function contact(): BelongsTo
+    {
+        return $this->belongsTo(Contact::class);
     }
 }

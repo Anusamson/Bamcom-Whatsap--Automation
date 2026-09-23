@@ -2,8 +2,12 @@
 
 namespace App\Services\AI\Tools;
 
+use App\Enums\TaskPriority;
+use App\Enums\TaskType;
 use App\Models\Activity;
 use App\Models\Contact;
+use App\Services\Task\TaskService;
+use Illuminate\Support\Carbon;
 
 /**
  * Controlled Tool: createSalesTask
@@ -79,12 +83,32 @@ class CreateSalesTaskTool implements AIToolInterface
             ? (int) $arguments['assigned_user_id']
             : ($context['conversation']?->assigned_user_id ?? $lead?->assigned_user_id);
 
+        $taskPriority = match ($priority) {
+            'urgent' => TaskPriority::Urgent,
+            'high' => TaskPriority::High,
+            'low' => TaskPriority::Low,
+            default => TaskPriority::Medium,
+        };
+
+        $realTask = app(TaskService::class)->createTask([
+            'title' => $title,
+            'description' => $arguments['description'] ?? null,
+            'contact_id' => $contact?->id,
+            'lead_id' => $lead?->id,
+            'assigned_user_id' => $assignedUserId,
+            'due_at' => Carbon::parse($dueDate),
+            'priority' => $taskPriority,
+            'type' => TaskType::FollowUp,
+        ]);
+
         $activity = Activity::create([
+            'contact_id' => $contact?->id,
             'lead_id' => $lead?->id,
             'user_id' => $assignedUserId ?? auth()->id(),
             'activity_type' => 'task',
             'description' => $title.(! empty($arguments['description']) ? ': '.$arguments['description'] : ''),
             'properties' => [
+                'task_id' => $realTask->id,
                 'title' => $title,
                 'task_description' => $arguments['description'] ?? null,
                 'due_date' => $dueDate,
@@ -97,7 +121,8 @@ class CreateSalesTaskTool implements AIToolInterface
 
         return [
             'success' => true,
-            'task_id' => $activity->id,
+            'task_id' => $realTask->id,
+            'activity_id' => $activity->id,
             'title' => $title,
             'due_date' => $dueDate,
             'priority' => $priority,

@@ -8,11 +8,13 @@ use App\Http\Controllers\InspectionController;
 use App\Http\Controllers\KnowledgeRecordController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadScoringRuleController;
+use App\Http\Controllers\NoteController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserRoleAssignmentController;
@@ -54,9 +56,19 @@ Route::middleware('auth')->group(function () {
     Route::resource('teams', TeamController::class);
 
     // CRM Contacts Module
+    Route::get('/contacts/{contact}/timeline', [ContactController::class, 'timeline'])->name('contacts.timeline');
     Route::patch('/contacts/{contact}/status', [ContactController::class, 'updateStatus'])->name('contacts.status');
     Route::post('/contacts/{contact}/touchpoint', [ContactController::class, 'logTouchpoint'])->name('contacts.touchpoint');
     Route::resource('contacts', ContactController::class);
+
+    // CRM Tasks & Reminders Subsystem
+    Route::match(['post', 'patch'], '/tasks/{task}/complete', [TaskController::class, 'complete'])->name('tasks.complete');
+    Route::match(['post', 'patch'], '/tasks/{task}/reopen', [TaskController::class, 'reopen'])->name('tasks.reopen');
+    Route::resource('tasks', TaskController::class);
+
+    // CRM Notes & Memos
+    Route::match(['post', 'patch'], '/notes/{note}/pin', [NoteController::class, 'togglePin'])->name('notes.pin');
+    Route::resource('notes', NoteController::class)->only(['store', 'update', 'destroy']);
 
     // Sales Leads Module
     Route::match(['post', 'patch'], '/leads/{lead}/status', [LeadController::class, 'updateStatus'])->name('leads.status');

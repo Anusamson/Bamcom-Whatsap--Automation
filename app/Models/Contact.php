@@ -12,7 +12,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
@@ -204,13 +203,33 @@ class Contact extends Model
     }
 
     /**
-     * Audit trail and sales activities across this contact's leads.
+     * CRM tasks and follow-ups associated with this contact.
      *
-     * @return HasManyThrough<Activity, Lead, $this>
+     * @return HasMany<Task, $this>
      */
-    public function activities(): HasManyThrough
+    public function tasks(): HasMany
     {
-        return $this->hasManyThrough(Activity::class, Lead::class)->latest('activities.id');
+        return $this->hasMany(Task::class)->latest('due_at');
+    }
+
+    /**
+     * Notes and internal memos written for this contact.
+     *
+     * @return HasMany<Note, $this>
+     */
+    public function notes(): HasMany
+    {
+        return $this->hasMany(Note::class)->priorityOrder();
+    }
+
+    /**
+     * Audit trail and CRM activities for this contact.
+     *
+     * @return HasMany<Activity, $this>
+     */
+    public function activities(): HasMany
+    {
+        return $this->hasMany(Activity::class)->latest('id');
     }
 
     /**

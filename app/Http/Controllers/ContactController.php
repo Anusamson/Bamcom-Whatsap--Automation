@@ -6,11 +6,15 @@ use App\DTOs\Contact\CreateContactDTO;
 use App\DTOs\Contact\UpdateContactDTO;
 use App\Enums\ContactStatus;
 use App\Enums\LeadSource;
+use App\Enums\TaskPriority;
+use App\Enums\TaskType;
 use App\Http\Requests\Contact\CreateContactRequest;
 use App\Http\Requests\Contact\UpdateContactRequest;
 use App\Models\Contact;
 use App\Models\User;
+use App\Services\Activity\ActivityRecorderService;
 use App\Services\Contact\ContactService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -122,7 +126,12 @@ class ContactController extends Controller
             'deals.property.estate',
             'deals.assignedUser',
             'deals.stage',
+            'tasks.assignedUser',
+            'notes.user',
+            'inspections.representative',
         ]);
+
+        $timeline = app(ActivityRecorderService::class)->getContactTimeline($contact);
 
         $users = User::query()
             ->select('id', 'name', 'email', 'role')
@@ -142,11 +151,26 @@ class ContactController extends Controller
             'badge' => $source->badgeClass(),
         ], LeadSource::cases());
 
+        $taskPriorities = array_map(fn (TaskPriority $p): array => [
+            'value' => $p->value,
+            'label' => $p->label(),
+            'badge' => $p->badgeClass(),
+        ], TaskPriority::cases());
+
+        $taskTypes = array_map(fn (TaskType $t): array => [
+            'value' => $t->value,
+            'label' => $t->label(),
+            'icon' => $t->iconName(),
+        ], TaskType::cases());
+
         return Inertia::render('Contacts/Show', [
             'contact' => $contact,
+            'timeline' => $timeline,
             'users' => $users,
             'statuses' => $statuses,
             'leadSources' => $leadSources,
+            'taskPriorities' => $taskPriorities,
+            'taskTypes' => $taskTypes,
         ]);
     }
 
@@ -240,5 +264,18 @@ class ContactController extends Controller
         $this->contactService->recordTouchpoint($contact);
 
         return back()->with('success', 'Interaction touchpoint recorded for '.$contact->full_name.'.');
+    }
+
+    /**
+     * Fetch filtered timeline events for contact.
+     */
+    public function timeline(Request $request, Contact $contact): JsonResponse
+    {
+        Gate::authorize('view', $contact);
+
+        $filters = $request->only(['category']);
+        $timeline = app(ActivityRecorderService::class)->getContactTimeline($contact, $filters);
+
+        return response()->json($timeline);
     }
 }

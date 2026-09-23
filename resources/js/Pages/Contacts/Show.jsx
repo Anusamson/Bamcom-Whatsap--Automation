@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { 
     Contact, 
     ArrowLeft, 
@@ -23,6 +23,7 @@ import {
     CheckCircle2, 
     CheckCheck,
     AlertCircle, 
+    AlertTriangle,
     ExternalLink,
     ChevronRight,
     UsersRound,
@@ -32,11 +33,25 @@ import {
     Flame,
     TrendingUp,
     Handshake,
-    XCircle
+    XCircle,
+    CheckSquare,
+    Pin,
+    PinOff,
+    Plus,
+    Check,
+    X
 } from 'lucide-react';
 import { useState } from 'react';
 
-export default function Show({ contact, users, statuses, leadSources }) {
+export default function Show({ 
+    contact, 
+    timeline = { items: [], total: 0, pinned_count: 0 },
+    users = [], 
+    statuses = [], 
+    leadSources = [],
+    taskPriorities = [],
+    taskTypes = []
+}) {
     const { auth, flash } = usePage().props;
     const permissions = auth.user?.permissions || [];
     const isSuperAdmin = auth.user?.is_super_admin;
@@ -44,14 +59,21 @@ export default function Show({ contact, users, statuses, leadSources }) {
 
     const [activeTab, setActiveTab] = useState('overview');
     const [noteText, setNoteText] = useState('');
-    const [notesList, setNotesList] = useState([
-        {
-            id: 1,
-            author: contact.assigned_user ? contact.assigned_user.name : 'System Agent',
-            content: `Contact registered through ${contact.lead_source?.toUpperCase() || 'CRM'}. Initial status marked as ${contact.status}.`,
-            created_at: contact.created_at,
-        }
-    ]);
+    const [isNotePinned, setIsNotePinned] = useState(false);
+    const [timelineCategory, setTimelineCategory] = useState('all');
+    const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+
+    // Quick Task form for this contact
+    const taskForm = useForm({
+        title: '',
+        description: '',
+        contact_id: contact.id,
+        lead_id: contact.leads?.[0]?.id || '',
+        assigned_user_id: contact.assigned_user_id || auth.user?.id || '',
+        due_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+        priority: 'medium',
+        type: 'follow_up',
+    });
 
     const handleStatusChange = (newStatus) => {
         router.patch(route('contacts.status', contact.id), { status: newStatus }, {
@@ -69,16 +91,46 @@ export default function Show({ contact, users, statuses, leadSources }) {
         e.preventDefault();
         if (!noteText.trim()) return;
 
-        setNotesList([
-            {
-                id: Date.now(),
-                author: auth.user?.name || 'CRM Agent',
-                content: noteText.trim(),
-                created_at: new Date().toISOString(),
+        router.post(route('notes.store'), {
+            contact_id: contact.id,
+            content: noteText.trim(),
+            is_pinned: isNotePinned,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setNoteText('');
+                setIsNotePinned(false);
             },
-            ...notesList
-        ]);
-        setNoteText('');
+        });
+    };
+
+    const handleTogglePinNote = (noteId) => {
+        router.post(route('notes.pin', noteId), {}, { preserveScroll: true });
+    };
+
+    const handleDeleteNote = (noteId) => {
+        if (confirm('Delete this note?')) {
+            router.delete(route('notes.destroy', noteId), { preserveScroll: true });
+        }
+    };
+
+    const handleCreateTask = (e) => {
+        e.preventDefault();
+        taskForm.post(route('tasks.store'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsTaskModalOpen(false);
+                taskForm.reset();
+            },
+        });
+    };
+
+    const handleToggleTaskComplete = (taskId, isCurrentlyCompleted) => {
+        if (isCurrentlyCompleted) {
+            router.post(route('tasks.reopen', taskId), {}, { preserveScroll: true });
+        } else {
+            router.post(route('tasks.complete', taskId), {}, { preserveScroll: true });
+        }
     };
 
     const getStatusBadge = (statusVal) => {
@@ -369,7 +421,20 @@ export default function Show({ contact, users, statuses, leadSources }) {
                         }`}
                     >
                         <Compass className="h-4 w-4" />
-                        <span>Site Inspections Shell</span>
+                        <span>Site Inspections ({contact.inspections?.length || 0})</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('tasks')}
+                        className={`flex items-center gap-2 py-3 px-4 text-sm font-bold border-b-2 whitespace-nowrap transition ${
+                            activeTab === 'tasks'
+                                ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+                        }`}
+                    >
+                        <CheckSquare className="h-4 w-4" />
+                        <span>Tasks & Follow-ups ({contact.tasks?.length || 0})</span>
                     </button>
 
                     <button
@@ -382,7 +447,7 @@ export default function Show({ contact, users, statuses, leadSources }) {
                         }`}
                     >
                         <Clock className="h-4 w-4" />
-                        <span>Activity & Notes Shell</span>
+                        <span>Contact 360 Timeline & Notes ({timeline.total || 0})</span>
                     </button>
                 </div>
 
@@ -799,98 +864,551 @@ export default function Show({ contact, users, statuses, leadSources }) {
                     </div>
                 )}
 
-                {/* TAB 4: Site Inspections Shell */}
+                {/* TAB 4: Site Inspections */}
                 {activeTab === 'inspections' && (
                     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
-                        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                             <div>
                                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                     <Compass className="h-5 w-5 text-amber-600" />
-                                    <span>Field Inspections & Site Visits Shell</span>
+                                    <span>Field Inspections & Site Visits ({contact.inspections?.length || 0})</span>
                                 </h3>
                                 <p className="text-xs text-slate-500 mt-0.5">
-                                    Physical site visits scheduled by {contact.full_name}.
+                                    Physical site visits scheduled or completed by {contact.full_name}.
+                                </p>
+                            </div>
+                            <Link
+                                href={route('inspections.index')}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition"
+                            >
+                                <Plus className="h-3.5 w-3.5" />
+                                <span>Schedule Field Inspection</span>
+                            </Link>
+                        </div>
+
+                        {contact.inspections && contact.inspections.length > 0 ? (
+                            <div className="space-y-3">
+                                {contact.inspections.map((inspection) => (
+                                    <div
+                                        key={inspection.id}
+                                        className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-amber-400 transition"
+                                    >
+                                        <div className="space-y-1 flex-1">
+                                            <div className="flex items-center flex-wrap gap-2">
+                                                <Link
+                                                    href={route('inspections.show', inspection.id)}
+                                                    className="font-bold text-slate-900 dark:text-white text-sm hover:text-amber-600 hover:underline"
+                                                >
+                                                    {inspection.property?.title || inspection.estate_name || 'Property Site Inspection'}
+                                                </Link>
+                                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 capitalize">
+                                                    {inspection.status?.replace('-', ' ')}
+                                                </span>
+                                            </div>
+
+                                            <p className="text-xs text-slate-500">
+                                                Date: <strong className="text-slate-700 dark:text-slate-300">{inspection.inspection_date} at {inspection.inspection_time}</strong>
+                                                {inspection.representative && (
+                                                    <span> • Field Rep: <strong className="text-slate-700 dark:text-slate-300">{inspection.representative.name}</strong></span>
+                                                )}
+                                                {inspection.meeting_point && (
+                                                    <span className="block text-[11px] text-slate-400 mt-0.5">Meeting Point: {inspection.meeting_point}</span>
+                                                )}
+                                            </p>
+
+                                            {inspection.outcome && (
+                                                <div className="mt-1 text-xs p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                                    <span className="font-semibold">Recorded Outcome:</span> {inspection.outcome}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <Link
+                                            href={route('inspections.show', inspection.id)}
+                                            className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex-shrink-0"
+                                        >
+                                            <span>View Inspection</span>
+                                            <ChevronRight className="h-3.5 w-3.5" />
+                                        </Link>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="p-8 text-center rounded-xl border border-dashed border-slate-200 dark:border-slate-800 space-y-3">
+                                <Compass className="h-8 w-8 text-slate-400 mx-auto" />
+                                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                                    No site inspections scheduled yet
+                                </h4>
+                                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                                    Invite {contact.first_name} for a guided inspection tour at any of our flagship estate developments.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* TAB 5: Tasks & Follow-ups */}
+                {activeTab === 'tasks' && (
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+                            <div>
+                                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <CheckSquare className="h-5 w-5 text-indigo-600" />
+                                    <span>CRM Tasks & Follow-ups ({contact.tasks?.length || 0})</span>
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    Track required phone calls, meetings, documents, and reminders for {contact.full_name}.
                                 </p>
                             </div>
                             <button
                                 type="button"
-                                className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-xl transition"
-                                onClick={() => alert('Inspection booking modal shell!')}
+                                onClick={() => setIsTaskModalOpen(true)}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition"
                             >
-                                + Book Site Inspection
+                                <Plus className="h-3.5 w-3.5" />
+                                <span>+ Add Task for {contact.first_name}</span>
                             </button>
                         </div>
 
-                        <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold text-slate-900 dark:text-white text-sm">
-                                        Epe Royal Waterfront Site Tour
-                                    </span>
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
-                                        Scheduled
-                                    </span>
-                                </div>
-                                <p className="text-xs text-slate-500 mt-1">
-                                    Assigned Inspection Officer: <strong className="text-slate-700 dark:text-slate-300">Ibrahim Musa</strong> • Date: Upcoming Saturday 10:00 AM
-                                </p>
+                        {contact.tasks && contact.tasks.length > 0 ? (
+                            <div className="space-y-3">
+                                {contact.tasks.map((task) => {
+                                    const isCompleted = task.status === 'completed' || task.status?.value === 'completed';
+                                    return (
+                                        <div
+                                            key={task.id}
+                                            className={`p-4 rounded-xl border transition flex items-start justify-between gap-4 ${
+                                                isCompleted
+                                                    ? 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 opacity-75'
+                                                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-indigo-300'
+                                            }`}
+                                        >
+                                            <div className="flex items-start gap-3 flex-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleToggleTaskComplete(task.id, isCompleted)}
+                                                    className={`mt-0.5 h-5 w-5 rounded-lg border flex items-center justify-center transition flex-shrink-0 ${
+                                                        isCompleted
+                                                            ? 'bg-emerald-600 border-emerald-600 text-white'
+                                                            : 'border-slate-300 dark:border-slate-600 hover:border-indigo-600 bg-white dark:bg-slate-800'
+                                                    }`}
+                                                    title={isCompleted ? 'Reopen task' : 'Mark completed'}
+                                                >
+                                                    {isCompleted && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                                                </button>
+
+                                                <div className="space-y-1 flex-1">
+                                                    <div className="flex items-center flex-wrap gap-2">
+                                                        <span className={`text-sm font-bold ${isCompleted ? 'line-through text-slate-500' : 'text-slate-900 dark:text-white'}`}>
+                                                            {task.title}
+                                                        </span>
+                                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 uppercase">
+                                                            {typeof task.priority === 'object' ? task.priority.label : task.priority}
+                                                        </span>
+                                                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+                                                            {typeof task.type === 'object' ? task.type.label : task.type}
+                                                        </span>
+                                                    </div>
+
+                                                    {task.description && (
+                                                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                                                            {task.description}
+                                                        </p>
+                                                    )}
+
+                                                    <div className="flex flex-wrap items-center gap-x-4 text-xs text-slate-400 pt-1">
+                                                        <span className="flex items-center gap-1">
+                                                            <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                                                            Due: {formatDate(task.due_at)}
+                                                        </span>
+                                                        {task.assigned_user && (
+                                                            <span className="flex items-center gap-1">
+                                                                <User className="h-3.5 w-3.5 text-slate-400" />
+                                                                Assigned: {task.assigned_user.name}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleToggleTaskComplete(task.id, isCompleted)}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                                                        isCompleted
+                                                            ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                                            : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm'
+                                                    }`}
+                                                >
+                                                    {isCompleted ? 'Reopen' : 'Done'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                Inspection Approved
-                            </span>
-                        </div>
+                        ) : (
+                            <div className="p-8 text-center rounded-xl border border-dashed border-slate-200 dark:border-slate-800 space-y-3">
+                                <CheckSquare className="h-8 w-8 text-slate-400 mx-auto" />
+                                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                                    No follow-up tasks currently assigned for this contact
+                                </h4>
+                                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                                    Create a follow-up task to ensure your sales team follows through on inquiries and deals.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsTaskModalOpen(true)}
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition"
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    <span>Create First Task</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
 
-                {/* TAB 5: Activity & Notes Shell */}
+                {/* TAB 6: Contact 360 Timeline & Notes */}
                 {activeTab === 'activity' && (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Note Entry Form */}
-                        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4">
-                            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                <FileText className="h-4 w-4 text-blue-600" />
-                                <span>Log CRM Activity / Note</span>
-                            </h3>
-                            <form onSubmit={handleAddNote} className="space-y-3">
-                                <textarea
-                                    rows="4"
-                                    value={noteText}
-                                    onChange={(e) => setNoteText(e.target.value)}
-                                    placeholder="Enter details of conversation, requirements, or next steps..."
-                                    className="w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                                />
-                                <button
-                                    type="submit"
-                                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition"
-                                >
-                                    Record Note
-                                </button>
-                            </form>
+                        {/* Note & Action Entry Form Column */}
+                        <div className="space-y-6">
+                            {/* Log Note Card */}
+                            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-blue-600" />
+                                        <span>Add Sales Note</span>
+                                    </h3>
+                                    <span className="text-[11px] text-slate-400">Internal only</span>
+                                </div>
+
+                                <form onSubmit={handleAddNote} className="space-y-3">
+                                    <textarea
+                                        rows="4"
+                                        required
+                                        value={noteText}
+                                        onChange={(e) => setNoteText(e.target.value)}
+                                        placeholder="Enter key details from phone call, buyer preferences, family decision factors, or requested paperwork..."
+                                        className="w-full p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                    />
+
+                                    <div className="flex items-center justify-between">
+                                        <label className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={isNotePinned}
+                                                onChange={(e) => setIsNotePinned(e.target.checked)}
+                                                className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-4 w-4"
+                                            />
+                                            <span className="flex items-center gap-1">
+                                                <Pin className="h-3 w-3 text-amber-500" />
+                                                <span>Pin to top of timeline</span>
+                                            </span>
+                                        </label>
+
+                                        <button
+                                            type="submit"
+                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition"
+                                        >
+                                            Save Note
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            {/* Quick Action Box */}
+                            <div className="bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-3">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                                    Quick CRM Actions
+                                </h4>
+                                <div className="space-y-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsTaskModalOpen(true)}
+                                        className="w-full flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 text-xs font-semibold text-slate-800 dark:text-slate-200 transition"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <CheckSquare className="h-4 w-4 text-indigo-600" />
+                                            <span>Schedule Follow-up Task</span>
+                                        </span>
+                                        <Plus className="h-3.5 w-3.5 text-slate-400" />
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleLogTouchpoint}
+                                        className="w-full flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-400 text-xs font-semibold text-slate-800 dark:text-slate-200 transition"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <Clock className="h-4 w-4 text-blue-600" />
+                                            <span>Log Touchpoint Timestamp</span>
+                                        </span>
+                                        <Check className="h-3.5 w-3.5 text-slate-400" />
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Activity Timeline */}
-                        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4">
-                            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                <Clock className="h-4 w-4 text-blue-600" />
-                                <span>Interaction History & Audit Log</span>
-                            </h3>
+                        {/* Interactive Timeline Stream Column */}
+                        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-5">
+                            {/* Timeline Header & Filters */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+                                <div>
+                                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                        <Clock className="h-4 w-4 text-blue-600" />
+                                        <span>Interaction History & Audit Log</span>
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Unified chronological stream of notes, audit events, inspections, and tasks.
+                                    </p>
+                                </div>
 
+                                {/* Filter Chips */}
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                    {['all', 'notes', 'tasks', 'activity', 'whatsapp'].map((cat) => (
+                                        <button
+                                            key={cat}
+                                            type="button"
+                                            onClick={() => setTimelineCategory(cat)}
+                                            className={`px-2.5 py-1 rounded-lg text-xs font-bold capitalize transition ${
+                                                timelineCategory === cat
+                                                    ? 'bg-blue-600 text-white shadow-sm'
+                                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                                            }`}
+                                        >
+                                            {cat === 'all' ? 'All' : cat}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Timeline Stream */}
                             <div className="space-y-4">
-                                {notesList.map((note) => (
-                                    <div key={note.id} className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 space-y-1.5">
-                                        <div className="flex items-center justify-between text-xs">
-                                            <span className="font-bold text-slate-900 dark:text-white">{note.author}</span>
-                                            <span className="text-[11px] text-slate-400">{formatDate(note.created_at)}</span>
-                                        </div>
-                                        <p className="text-xs text-slate-700 dark:text-slate-300">{note.content}</p>
+                                {timeline.items && timeline.items.length > 0 ? (
+                                    timeline.items
+                                        .filter(item => {
+                                            if (timelineCategory === 'all') return true;
+                                            if (timelineCategory === 'notes') return item.category === 'note';
+                                            if (timelineCategory === 'tasks') return item.category === 'task';
+                                            if (timelineCategory === 'whatsapp') return item.category === 'message';
+                                            if (timelineCategory === 'activity') return item.category === 'activity';
+                                            return true;
+                                        })
+                                        .map((item) => (
+                                            <div
+                                                key={item.id}
+                                                className={`p-4 rounded-2xl border transition ${
+                                                    item.is_pinned
+                                                        ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/80 shadow-sm'
+                                                        : 'bg-slate-50/70 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800'
+                                                }`}
+                                            >
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="flex items-center gap-2">
+                                                        {item.is_pinned ? (
+                                                            <span className="p-1.5 rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-bold text-xs flex items-center gap-1">
+                                                                <Pin className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                                                                Pinned Memo
+                                                            </span>
+                                                        ) : (
+                                                            <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${item.badge || 'bg-slate-100 text-slate-700'}`}>
+                                                                {item.title}
+                                                            </span>
+                                                        )}
+
+                                                        {item.actor && (
+                                                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                                                by {item.actor.name}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                                        <span className="text-[11px] text-slate-400">
+                                                            {formatDate(item.created_at)}
+                                                        </span>
+
+                                                        {/* Actions for Notes */}
+                                                        {item.category === 'note' && (
+                                                            <div className="flex items-center gap-1 ml-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleTogglePinNote(item.raw_id)}
+                                                                    className="p-1 rounded text-slate-400 hover:text-amber-600 transition"
+                                                                    title={item.is_pinned ? 'Unpin note' : 'Pin note'}
+                                                                >
+                                                                    {item.is_pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteNote(item.raw_id)}
+                                                                    className="p-1 rounded text-slate-400 hover:text-rose-600 transition"
+                                                                    title="Delete note"
+                                                                >
+                                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <p className="text-xs text-slate-800 dark:text-slate-200 mt-2 whitespace-pre-line">
+                                                    {item.description}
+                                                </p>
+                                            </div>
+                                        ))
+                                ) : (
+                                    <div className="p-8 text-center rounded-xl border border-dashed border-slate-200 dark:border-slate-800 space-y-2">
+                                        <Clock className="h-8 w-8 text-slate-400 mx-auto" />
+                                        <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                            No activity entries recorded yet
+                                        </h4>
+                                        <p className="text-xs text-slate-500">
+                                            Add a note or schedule a task to begin the contact interaction timeline.
+                                        </p>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </div>
                     </div>
                 )}
             </div>
+
+            {/* Quick Task Creation Modal */}
+            {isTaskModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                            <div className="flex items-center gap-2">
+                                <CheckSquare className="h-5 w-5 text-indigo-600" />
+                                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                                    Create Task for {contact.full_name}
+                                </h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsTaskModalOpen(false)}
+                                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleCreateTask} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
+                                    Task Title <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={taskForm.data.title}
+                                    onChange={(e) => taskForm.setData('title', e.target.value)}
+                                    placeholder="e.g., Call client regarding Silverstone installment schedule"
+                                    className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
+                                        Type
+                                    </label>
+                                    <select
+                                        value={taskForm.data.type}
+                                        onChange={(e) => taskForm.setData('type', e.target.value)}
+                                        className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        {taskTypes.map((t) => (
+                                            <option key={t.value} value={t.value}>{t.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
+                                        Priority
+                                    </label>
+                                    <select
+                                        value={taskForm.data.priority}
+                                        onChange={(e) => taskForm.setData('priority', e.target.value)}
+                                        className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        {taskPriorities.map((p) => (
+                                            <option key={p.value} value={p.value}>{p.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
+                                        Assigned Rep
+                                    </label>
+                                    <select
+                                        value={taskForm.data.assigned_user_id}
+                                        onChange={(e) => taskForm.setData('assigned_user_id', e.target.value)}
+                                        className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        <option value="">Unassigned</option>
+                                        {users.map((u) => (
+                                            <option key={u.id} value={u.id}>{u.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
+                                        Due Date & Time
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        required
+                                        value={taskForm.data.due_at}
+                                        onChange={(e) => taskForm.setData('due_at', e.target.value)}
+                                        className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">
+                                    Notes / Description
+                                </label>
+                                <textarea
+                                    rows="2"
+                                    value={taskForm.data.description}
+                                    onChange={(e) => taskForm.setData('description', e.target.value)}
+                                    placeholder="Add any specific instructions or requirements..."
+                                    className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsTaskModalOpen(false)}
+                                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={taskForm.processing}
+                                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold rounded-xl shadow-sm transition disabled:opacity-50"
+                                >
+                                    {taskForm.processing ? 'Creating...' : 'Create Task'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </AuthenticatedLayout>
     );
 }
+

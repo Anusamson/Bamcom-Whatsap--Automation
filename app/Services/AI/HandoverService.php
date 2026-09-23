@@ -7,6 +7,8 @@ use App\Enums\ConversationMode;
 use App\Enums\ConversationStatus;
 use App\Enums\HandoverTrigger;
 use App\Enums\LeadTemperature;
+use App\Enums\TaskPriority;
+use App\Enums\TaskType;
 use App\Enums\UserStatus;
 use App\Jobs\SendWhatsAppResponseJob;
 use App\Models\Activity;
@@ -15,6 +17,8 @@ use App\Models\User;
 use App\Notifications\HandoverRequiredNotification;
 use App\Services\AI\DTOs\IntentResult;
 use App\Services\Lead\LeadScoringService;
+use App\Services\Task\TaskService;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
@@ -302,12 +306,32 @@ class HandoverService
         $dueDate = now()->addHours($dueHours)->toDateTimeString();
         $title = "[Handover - {$trigger->label()}] Follow up with {$contact?->full_name}";
 
+        $taskPriority = match ($priority) {
+            'urgent' => TaskPriority::Urgent,
+            'high' => TaskPriority::High,
+            'low' => TaskPriority::Low,
+            default => TaskPriority::Medium,
+        };
+
+        $realTask = app(TaskService::class)->createTask([
+            'title' => $title,
+            'description' => $reason,
+            'contact_id' => $contact?->id,
+            'lead_id' => $lead?->id,
+            'assigned_user_id' => $assignedUser?->id,
+            'due_at' => Carbon::parse($dueDate),
+            'priority' => $taskPriority,
+            'type' => TaskType::FollowUp,
+        ]);
+
         return Activity::create([
+            'contact_id' => $contact?->id,
             'lead_id' => $lead?->id,
             'user_id' => $assignedUser?->id,
             'activity_type' => 'task',
             'description' => "{$title}: {$reason}",
             'properties' => [
+                'task_id' => $realTask->id,
                 'title' => $title,
                 'task_description' => $reason,
                 'trigger' => $trigger->value,
