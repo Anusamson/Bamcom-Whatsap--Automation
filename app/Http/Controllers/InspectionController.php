@@ -63,7 +63,7 @@ class InspectionController extends Controller
 
         // Reference lists for scheduling & filters
         $representatives = User::query()
-            ->where('is_active', true)
+            ->where('status', 'active')
             ->select('id', 'name', 'email')
             ->orderBy('name')
             ->get();
@@ -170,7 +170,7 @@ class InspectionController extends Controller
             ->get();
 
         $representatives = User::query()
-            ->where('is_active', true)
+            ->where('status', 'active')
             ->select('id', 'name', 'email')
             ->orderBy('name')
             ->get();

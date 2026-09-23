@@ -246,8 +246,11 @@ class User extends Authenticatable
         // 4. Field inspection activity
         if (Schema::hasTable('inspections')) {
             $hasInspectionActivity = DB::table('inspections')
-                ->where('inspector_id', $this->id)
-                ->orWhere('user_id', $this->id)
+                ->where(function ($q): void {
+                    $q->where('representative_id', $this->id)
+                        ->orWhere('created_by_id', $this->id);
+                })
+                ->whereNull('deleted_at')
                 ->exists();
             if ($hasInspectionActivity) {
                 return true;
