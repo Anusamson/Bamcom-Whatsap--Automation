@@ -33,7 +33,9 @@ import {
     ExternalLink,
     RefreshCw,
     SlidersHorizontal,
-    Compass
+    Compass,
+    AlertTriangle,
+    CheckCircle2
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 
@@ -230,6 +232,19 @@ export default function Inbox({
         });
     };
 
+    // Resume AI or Hybrid Mode
+    const [resumingAi, setResumingAi] = useState(false);
+    const handleResumeAi = (targetMode = 'ai') => {
+        if (!activeConversation) return;
+        setResumingAi(true);
+        router.post(route('inbox.resume-ai', activeConversation.id), {
+            target_mode: targetMode,
+        }, {
+            preserveScroll: true,
+            onFinish: () => setResumingAi(false),
+        });
+    };
+
     // Helpers
     const formatTime = (dateString) => {
         if (!dateString) return '';
@@ -279,6 +294,11 @@ export default function Inbox({
 
     // Inspections scheduled
     const scheduledInspections = activities.filter(a => a.activity_type === 'inspection_scheduled');
+    const followUpTasks = activities.filter(a => a.activity_type === 'task');
+
+    // AI Handover State
+    const isAiPaused = Boolean(activeConversation?.metadata?.ai_paused);
+    const handoverInfo = activeConversation?.metadata?.handover;
 
     // Filter pills definition
     const filterTabs = [
@@ -448,7 +468,7 @@ export default function Inbox({
 
                                                 {/* Badges / Status row */}
                                                 <div className="flex items-center justify-between text-[10px]">
-                                                    <div className="flex items-center gap-1">
+                                                    <div className="flex items-center gap-1 flex-wrap">
                                                         <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium uppercase tracking-wider ${
                                                             conv.status === 'open' 
                                                                 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' 
@@ -458,6 +478,12 @@ export default function Inbox({
                                                         }`}>
                                                             {conv.status}
                                                         </span>
+
+                                                        {conv.metadata?.ai_paused && (
+                                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-200 dark:border-rose-900" title="Handover to representative active">
+                                                                Handover
+                                                            </span>
+                                                        )}
 
                                                         <span className="text-slate-400 truncate max-w-[90px]">
                                                             {conv.assigned_user ? conv.assigned_user.name : 'Unassigned'}
@@ -588,6 +614,69 @@ export default function Inbox({
                                     </button>
                                 </div>
                             </div>
+
+                            {/* AI Handover Alert Banner */}
+                            {isAiPaused && (
+                                <div className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-800/60 p-3 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+                                    <div className="flex items-start gap-2.5">
+                                        <div className="p-1.5 rounded-lg bg-amber-500 text-white shrink-0 mt-0.5">
+                                            <AlertTriangle className="h-4 w-4" />
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                                                    AI Paused &mdash; Handed Over to Human
+                                                </span>
+                                                {handoverInfo?.trigger_label && (
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                                        handoverInfo.priority === 'urgent'
+                                                            ? 'bg-rose-100 text-rose-800 border border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-900'
+                                                            : handoverInfo.priority === 'high'
+                                                            ? 'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-900'
+                                                            : 'bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-900'
+                                                    }`}>
+                                                        {handoverInfo.trigger_label}
+                                                    </span>
+                                                )}
+                                                {handoverInfo?.assigned_to_name && (
+                                                    <span className="text-[11px] text-amber-800 dark:text-amber-300">
+                                                        Assigned: <strong>{handoverInfo.assigned_to_name}</strong>
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {handoverInfo?.reason && (
+                                                <p className="text-xs text-amber-800/90 dark:text-amber-300/90 mt-0.5">
+                                                    {handoverInfo.reason}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Action Buttons to Resume AI */}
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleResumeAi('ai')}
+                                            disabled={resumingAi}
+                                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white transition flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                                            title="Return this conversation to full autonomous AI Agent"
+                                        >
+                                            <Bot className="h-3.5 w-3.5" />
+                                            <span>Return to AI</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleResumeAi('hybrid')}
+                                            disabled={resumingAi}
+                                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                                            title="Return this conversation to Hybrid Mode (AI suggestions)"
+                                        >
+                                            <Sparkles className="h-3.5 w-3.5" />
+                                            <span>Return to Hybrid</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Conversation Message Stream */}
                             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50 dark:bg-slate-950/20">
@@ -1008,6 +1097,52 @@ export default function Inbox({
                                                     <p className="text-[10px] text-slate-400 mt-1 italic">
                                                         "{insp.properties.notes}"
                                                     </p>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Follow-Up Tasks & Action Items */}
+                            <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                                        Tasks & Follow-Ups ({followUpTasks.length})
+                                    </span>
+                                </div>
+
+                                {followUpTasks.length === 0 ? (
+                                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 text-center">
+                                        <CheckCircle2 className="h-5 w-5 text-slate-400 mx-auto mb-1 stroke-1" />
+                                        <p className="text-[11px] text-slate-500">No pending follow-up tasks</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {followUpTasks.map(task => (
+                                            <div 
+                                                key={task.id}
+                                                className="p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-xs"
+                                            >
+                                                <div className="flex items-start justify-between gap-1.5 font-semibold text-slate-900 dark:text-white">
+                                                    <span className="leading-snug">{task.description}</span>
+                                                    {task.properties?.priority && (
+                                                        <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase shrink-0 font-bold ${
+                                                            task.properties.priority === 'urgent'
+                                                                ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
+                                                                : task.properties.priority === 'high'
+                                                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+                                                                : 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                                                        }`}>
+                                                            {task.properties.priority}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {task.properties?.due_date && (
+                                                    <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+                                                        <Clock className="h-3 w-3" />
+                                                        Due: {new Date(task.properties.due_date).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
                                                 )}
                                             </div>
                                         ))}

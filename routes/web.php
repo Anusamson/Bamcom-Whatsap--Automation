@@ -90,6 +90,8 @@ Route::middleware('auth')->group(function () {
     Route::patch('/inbox/{conversation}/assign', [ConversationInboxController::class, 'assign'])->name('inbox.assign');
     Route::post('/inbox/{conversation}/read', [ConversationInboxController::class, 'markRead'])->name('inbox.read');
     Route::post('/inbox/{conversation}/inspections', [ConversationInboxController::class, 'scheduleInspection'])->name('inbox.inspections.store');
+    Route::post('/inbox/{conversation}/resume-ai', [ConversationInboxController::class, 'resumeAi'])->name('inbox.resume-ai');
+    Route::post('/inbox/{conversation}/handover', [ConversationInboxController::class, 'triggerHandover'])->name('inbox.handover');
 
     // AI Knowledge Base Subsystem
     Route::patch('/knowledge/{knowledge}/toggle-status', [KnowledgeRecordController::class, 'toggleStatus'])->name('knowledge.toggle-status');

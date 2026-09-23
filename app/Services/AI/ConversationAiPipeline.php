@@ -2,7 +2,6 @@
 
 namespace App\Services\AI;
 
-use App\Enums\AIIntent;
 use App\Enums\ConversationMode;
 use App\Enums\ConversationStatus;
 use App\Jobs\SendWhatsAppResponseJob;
@@ -36,7 +35,8 @@ class ConversationAiPipeline
         protected BamcomSalesAgent $agent,
         protected IntentClassifier $intentClassifier,
         protected AISafetyValidator $safetyValidator,
-        protected ConversationService $conversationService
+        protected ConversationService $conversationService,
+        protected HandoverService $handoverService
     ) {}
 
     /**
@@ -108,9 +108,14 @@ class ConversationAiPipeline
                 'mode' => $conversation->mode->value,
             ]);
 
-            // 4. Handle Human Handover Request
-            if ($intentResult->requiresHumanTakeover || $intentResult->intent === AIIntent::HumanHandover) {
-                return $this->handleHumanHandover($conversation, $incomingMessage, $intentResult->intent->value);
+            // 4. Check for AI-to-Human Handover Triggers (7 Triggers via HandoverService)
+            $handoverTrigger = $this->handoverService->detectTrigger($conversation, $messageText, $intentResult);
+
+            if ($handoverTrigger !== null) {
+                return $this->handoverService->executeHandover($conversation, $handoverTrigger, [
+                    'incoming_message' => $incomingMessage,
+                    'intent' => $intentResult->intent->value,
+                ]);
             }
 
             // 5. AI Generation via BamcomSalesAgent (Zero-hallucination + 10 controlled tools)

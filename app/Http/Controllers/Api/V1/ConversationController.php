@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\ConversationMode;
 use App\Enums\ConversationStatus;
+use App\Enums\HandoverTrigger;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Conversation\AssignConversationRequest;
 use App\Http\Requests\Conversation\CreateConversationRequest;
@@ -12,6 +13,7 @@ use App\Http\Requests\Conversation\UpdateConversationStatusRequest;
 use App\Models\Contact;
 use App\Models\Conversation;
 use App\Models\User;
+use App\Services\AI\HandoverService;
 use App\Services\Conversation\ConversationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -188,6 +190,56 @@ class ConversationController extends Controller
 
         return response()->json([
             'data' => $conversations,
+        ]);
+    }
+
+    /**
+     * Return conversation to AI or Hybrid mode (authorized users only).
+     */
+    public function resumeAi(Request $request, Conversation $conversation, HandoverService $handoverService): JsonResponse
+    {
+        Gate::authorize('resumeAi', $conversation);
+
+        $validated = $request->validate([
+            'mode' => ['required_without:target_mode', 'nullable', 'string', 'in:ai,hybrid'],
+            'target_mode' => ['required_without:mode', 'nullable', 'string', 'in:ai,hybrid'],
+        ]);
+
+        $modeStr = (string) ($validated['mode'] ?? $validated['target_mode']);
+        $mode = ConversationMode::from($modeStr);
+        $conversation = $handoverService->resumeAi($conversation, $mode, $request->user());
+
+        return response()->json([
+            'success' => true,
+            'message' => "Conversation returned to {$mode->label()}.",
+            'data' => $conversation,
+        ]);
+    }
+
+    /**
+     * Trigger AI-to-human handover.
+     */
+    public function handover(Request $request, Conversation $conversation, HandoverService $handoverService): JsonResponse
+    {
+        Gate::authorize('update', $conversation);
+
+        $validated = $request->validate([
+            'trigger' => ['nullable', 'string'],
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $trigger = ! empty($validated['trigger'])
+            ? HandoverTrigger::tryFrom($validated['trigger']) ?? HandoverTrigger::CustomerRequest
+            : HandoverTrigger::CustomerRequest;
+
+        $result = $handoverService->executeHandover($conversation, $trigger, [
+            'reason' => $validated['reason'] ?? 'Manual representative handover via API.',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Conversation handed over to sales representative.',
+            'data' => $result,
         ]);
     }
 }

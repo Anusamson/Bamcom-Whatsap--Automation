@@ -2,9 +2,9 @@
 
 namespace App\Services\AI\Tools;
 
-use App\Enums\ConversationMode;
-use App\Models\Activity;
+use App\Enums\HandoverTrigger;
 use App\Models\Conversation;
+use App\Services\AI\HandoverService;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -50,24 +50,11 @@ class RequestHumanHandoverTool implements AIToolInterface
         $urgency = (string) ($arguments['urgency'] ?? 'medium');
 
         if ($conversation instanceof Conversation) {
-            $conversation->update([
-                'mode' => ConversationMode::Human,
-                'status' => 'open',
-            ]);
-
-            $lead = $conversation->contact?->leads()->latest()->first();
-
-            Activity::create([
-                'lead_id' => $lead?->id,
-                'user_id' => $conversation->assigned_user_id,
-                'activity_type' => 'escalation',
-                'description' => "AI escalated conversation to human representative. Reason: {$reason}",
-                'properties' => [
-                    'reason' => $reason,
-                    'urgency' => $urgency,
-                    'conversation_id' => $conversation->id,
-                    'escalated_at' => now()->toIso8601String(),
-                ],
+            /** @var HandoverService $handoverService */
+            $handoverService = app(HandoverService::class);
+            $handoverService->executeHandover($conversation, HandoverTrigger::CustomerRequest, [
+                'reason' => $reason,
+                'urgency' => $urgency,
             ]);
 
             Log::info("Conversation #{$conversation->id} switched to human mode via RequestHumanHandoverTool.", [

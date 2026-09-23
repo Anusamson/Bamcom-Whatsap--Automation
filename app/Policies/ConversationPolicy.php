@@ -41,6 +41,14 @@ class ConversationPolicy
     }
 
     /**
+     * Determine whether the user can resume AI or Hybrid mode on the conversation.
+     */
+    public function resumeAi(User $user, Conversation $conversation): bool
+    {
+        return $user->isSuperAdmin() || $user->hasPermissionTo(PermissionEnum::ConversationsManage->value);
+    }
+
+    /**
      * Determine whether the user can assign/reassign conversation to an agent.
      */
     public function assign(User $user, Conversation $conversation): bool

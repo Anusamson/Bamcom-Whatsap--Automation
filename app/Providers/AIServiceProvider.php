@@ -7,6 +7,7 @@ use App\Services\AI\BamcomSalesAgent;
 use App\Services\AI\ContextBuilder;
 use App\Services\AI\Contracts\AIProviderInterface;
 use App\Services\AI\ConversationAiPipeline;
+use App\Services\AI\HandoverService;
 use App\Services\AI\IntentClassifier;
 use App\Services\AI\KnowledgeService;
 use App\Services\AI\Providers\GeminiProvider;
@@ -113,13 +114,19 @@ class AIServiceProvider extends ServiceProvider
             return new AISafetyValidator;
         });
 
-        // 9. Register ConversationAiPipeline
+        // 9. Register HandoverService
+        $this->app->singleton(HandoverService::class, function (): HandoverService {
+            return new HandoverService;
+        });
+
+        // 10. Register ConversationAiPipeline
         $this->app->singleton(ConversationAiPipeline::class, function ($app): ConversationAiPipeline {
             return new ConversationAiPipeline(
                 agent: $app->make(BamcomSalesAgent::class),
                 intentClassifier: $app->make(IntentClassifier::class),
                 safetyValidator: $app->make(AISafetyValidator::class),
-                conversationService: $app->make(ConversationService::class)
+                conversationService: $app->make(ConversationService::class),
+                handoverService: $app->make(HandoverService::class)
             );
         });
     }

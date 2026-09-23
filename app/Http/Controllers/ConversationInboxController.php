@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\ConversationMode;
 use App\Enums\ConversationStatus;
+use App\Enums\HandoverTrigger;
 use App\Http\Requests\Conversation\AssignConversationRequest;
 use App\Http\Requests\Conversation\SendMessageRequest;
 use App\Http\Requests\Conversation\UpdateConversationModeRequest;
@@ -14,6 +15,7 @@ use App\Models\Estate;
 use App\Models\Lead;
 use App\Models\User;
 use App\Models\WhatsAppTemplate;
+use App\Services\AI\HandoverService;
 use App\Services\Conversation\ConversationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -232,5 +234,47 @@ class ConversationInboxController extends Controller
         ]);
 
         return back()->with('success', "Inspection scheduled at {$validated['estate_name']}.");
+    }
+
+    /**
+     * Return conversation to AI or Hybrid mode (authorized users only).
+     */
+    public function resumeAi(Request $request, Conversation $conversation, HandoverService $handoverService): RedirectResponse
+    {
+        Gate::authorize('resumeAi', $conversation);
+
+        $validated = $request->validate([
+            'mode' => ['required_without:target_mode', 'nullable', 'string', 'in:ai,hybrid'],
+            'target_mode' => ['required_without:mode', 'nullable', 'string', 'in:ai,hybrid'],
+        ]);
+
+        $modeStr = (string) ($validated['mode'] ?? $validated['target_mode']);
+        $mode = ConversationMode::from($modeStr);
+        $handoverService->resumeAi($conversation, $mode, $request->user());
+
+        return back()->with('success', "Conversation returned to {$mode->label()}.");
+    }
+
+    /**
+     * Manually trigger AI-to-human handover.
+     */
+    public function triggerHandover(Request $request, Conversation $conversation, HandoverService $handoverService): RedirectResponse
+    {
+        Gate::authorize('update', $conversation);
+
+        $validated = $request->validate([
+            'trigger' => ['nullable', 'string'],
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $trigger = ! empty($validated['trigger'])
+            ? HandoverTrigger::tryFrom($validated['trigger']) ?? HandoverTrigger::CustomerRequest
+            : HandoverTrigger::CustomerRequest;
+
+        $handoverService->executeHandover($conversation, $trigger, [
+            'reason' => $validated['reason'] ?? 'Manual representative handover requested from inbox.',
+        ]);
+
+        return back()->with('success', 'Conversation handed over to sales representative.');
     }
 }

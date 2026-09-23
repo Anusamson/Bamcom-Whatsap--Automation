@@ -78,6 +78,8 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/conversations/{conversation}/status', [ConversationController::class, 'updateStatus'])->name('api.v1.conversations.status');
         Route::patch('/conversations/{conversation}/assign', [ConversationController::class, 'assign'])->name('api.v1.conversations.assign');
         Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead'])->name('api.v1.conversations.read');
+        Route::post('/conversations/{conversation}/resume-ai', [ConversationController::class, 'resumeAi'])->name('api.v1.conversations.resume-ai');
+        Route::post('/conversations/{conversation}/handover', [ConversationController::class, 'handover'])->name('api.v1.conversations.handover');
         Route::get('/contacts/{contact}/conversations', [ConversationController::class, 'byContact'])->name('api.v1.contacts.conversations');
         Route::apiResource('conversations', ConversationController::class)->except(['destroy'])->names('api.v1.conversations');
 
