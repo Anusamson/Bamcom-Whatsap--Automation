@@ -46,6 +46,14 @@ export default function Sidebar({
             badgeColor: 'bg-indigo-600 text-white',
         },
         {
+            name: 'WhatsApp Inbox',
+            href: route('conversations.inbox'),
+            active: route().current('conversations.*'),
+            icon: MessageSquare,
+            badge: 'Live',
+            badgeColor: 'bg-emerald-500 text-white',
+        },
+        {
             name: 'Sales Leads',
             href: route('leads.index'),
             active: route().current('leads.*'),

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\ConversationInboxController;
 use App\Http\Controllers\DealController;
 use App\Http\Controllers\EstateController;
 use App\Http\Controllers\LeadController;
@@ -78,6 +79,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings/whatsapp', [WhatsAppSettingsController::class, 'index'])->name('whatsapp.settings.index');
     Route::post('/settings/whatsapp/test-connection', [WhatsAppSettingsController::class, 'testConnection'])->name('whatsapp.settings.test-connection');
     Route::post('/settings/whatsapp/sync-templates', [WhatsAppSettingsController::class, 'syncTemplates'])->name('whatsapp.settings.sync-templates');
+
+    // WhatsApp Team Inbox & Real-time Messaging
+    Route::get('/inbox', [ConversationInboxController::class, 'index'])->name('conversations.inbox');
+    Route::get('/conversations', [ConversationInboxController::class, 'index'])->name('conversations.index');
+    Route::post('/inbox/{conversation}/messages', [ConversationInboxController::class, 'sendMessage'])->name('inbox.messages.store');
+    Route::patch('/inbox/{conversation}/mode', [ConversationInboxController::class, 'updateMode'])->name('inbox.mode');
+    Route::patch('/inbox/{conversation}/status', [ConversationInboxController::class, 'updateStatus'])->name('inbox.status');
+    Route::patch('/inbox/{conversation}/assign', [ConversationInboxController::class, 'assign'])->name('inbox.assign');
+    Route::post('/inbox/{conversation}/read', [ConversationInboxController::class, 'markRead'])->name('inbox.read');
+    Route::post('/inbox/{conversation}/inspections', [ConversationInboxController::class, 'scheduleInspection'])->name('inbox.inspections.store');
 });
 
 require __DIR__.'/auth.php';

@@ -56,6 +56,21 @@ class ConversationService
             }
         }
 
+        // Quick filter tabs: all, mine, unassigned, unread, ai, human, hybrid, hot_leads
+        $tab = strtolower((string) ($filters['tab'] ?? 'all'));
+        match ($tab) {
+            'mine' => $query->where('assigned_user_id', $filters['current_user_id'] ?? auth()->id()),
+            'unassigned' => $query->whereNull('assigned_user_id'),
+            'unread' => $query->where('unread_count', '>', 0),
+            'ai' => $query->where('mode', ConversationMode::Ai),
+            'human' => $query->where('mode', ConversationMode::Human),
+            'hybrid' => $query->where('mode', ConversationMode::Hybrid),
+            'hot_leads' => $query->whereHas('contact.leads', function ($q): void {
+                $q->where(fn ($sub) => $sub->where('score', '>=', 70)->orWhere('temperature', 'hot'));
+            }),
+            default => null,
+        };
+
         if (! empty($filters['search'])) {
             $query->search((string) $filters['search']);
         }
@@ -260,5 +275,46 @@ class ConversationService
         });
 
         return $conversation;
+    }
+
+    /**
+     * Compute real-time counts for the 8 inbox filter tabs.
+     *
+     * @return array<string, int>
+     */
+    public function getInboxFilterCounts(?User $user = null): array
+    {
+        $userId = $user?->id ?? auth()->id();
+
+        return [
+            'all' => Conversation::count(),
+            'mine' => $userId ? Conversation::where('assigned_user_id', $userId)->count() : 0,
+            'unassigned' => Conversation::whereNull('assigned_user_id')->count(),
+            'unread' => Conversation::where('unread_count', '>', 0)->count(),
+            'ai' => Conversation::where('mode', ConversationMode::Ai)->count(),
+            'human' => Conversation::where('mode', ConversationMode::Human)->count(),
+            'hybrid' => Conversation::where('mode', ConversationMode::Hybrid)->count(),
+            'hot_leads' => Conversation::whereHas('contact.leads', function ($q): void {
+                $q->where(fn ($sub) => $sub->where('score', '>=', 70)->orWhere('temperature', 'hot'));
+            })->count(),
+        ];
+    }
+
+    /**
+     * Eagerly load all relations required for the team inbox active conversation pane.
+     */
+    public function loadActiveConversationDetails(Conversation $conversation): Conversation
+    {
+        return $conversation->load([
+            'contact.leads.property.estate',
+            'contact.leads.stage',
+            'contact.leads.pipeline',
+            'contact.leads.activities',
+            'contact.deals.property.estate',
+            'contact.deals.stage',
+            'assignedUser.profile',
+            'account',
+            'messages' => fn ($q) => $q->oldest('created_at'),
+        ]);
     }
 }

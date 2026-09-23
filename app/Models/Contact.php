@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
@@ -190,6 +191,16 @@ class Contact extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(Message::class)->latest();
+    }
+
+    /**
+     * Audit trail and sales activities across this contact's leads.
+     *
+     * @return HasManyThrough<Activity, Lead, $this>
+     */
+    public function activities(): HasManyThrough
+    {
+        return $this->hasManyThrough(Activity::class, Lead::class)->latest('activities.id');
     }
 
     /**
