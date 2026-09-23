@@ -2,9 +2,12 @@
 
 namespace App\Services\AI;
 
+use App\Enums\KnowledgeCategory;
 use App\Models\Estate;
+use App\Models\KnowledgeRecord;
 use App\Models\Property;
 use App\Services\Property\PropertyIntelligenceService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -12,6 +15,10 @@ use Illuminate\Support\Facades\Cache;
  *
  * Provides authoritative company, estate, and property inventory context
  * ensuring zero hallucinations for customer communications.
+ *
+ * STRICT GUARANTEES:
+ * 1. Only active knowledge records (within valid effective/expiration dates) are accessible to AI.
+ * 2. Property prices and inventory availability MUST strictly originate from the live property database.
  */
 class KnowledgeService
 {
@@ -31,6 +38,7 @@ class KnowledgeService
         return Cache::remember($cacheKey, 300, function () use ($estateSlug): array {
             $base = $this->propertyIntelligence->getAuthoritativeKnowledgeBase($estateSlug);
             $base['company_faq'] = $this->getCompanyFaqs();
+            $base['active_knowledge_summary'] = $this->getActiveKnowledgeRecordsSummary();
 
             return $base;
         });
@@ -46,7 +54,7 @@ class KnowledgeService
     {
         $term = strtolower(trim($query));
 
-        // 1. Check matching estates
+        // 1. Authoritative Estates from live database
         $estates = Estate::query()
             ->active()
             ->where(function ($q) use ($term): void {
@@ -57,7 +65,7 @@ class KnowledgeService
             })
             ->get();
 
-        // 2. Query properties matching criteria or query term
+        // 2. Authoritative Properties from live database (Prices & Availability strictly from property DB)
         $propertyCriteria = array_merge([
             'location' => $filters['location'] ?? null,
             'max_price' => $filters['max_price'] ?? null,
@@ -70,7 +78,7 @@ class KnowledgeService
 
         $properties = $this->propertyIntelligence->queryPropertiesForAi($propertyCriteria);
 
-        // If no properties found by specific location, fallback to featured available inventory
+        // Fallback to featured active inventory if no direct matches
         if ($properties->isEmpty()) {
             $properties = Property::query()
                 ->available()
@@ -82,19 +90,11 @@ class KnowledgeService
                 ->map(fn (Property $p): array => $this->propertyIntelligence->formatPropertyForAi($p));
         }
 
-        // 3. Search Company FAQs
-        $faqs = collect($this->getCompanyFaqs())
-            ->filter(function (array $item) use ($term): bool {
-                if (empty($term)) {
-                    return true;
-                }
+        // 3. Search ONLY ACTIVE Knowledge Records from the database
+        $matchedKnowledge = $this->searchActiveKnowledge($term, $filters['category'] ?? null);
 
-                return str_contains(strtolower($item['question']), $term)
-                    || str_contains(strtolower($item['answer']), $term)
-                    || in_array($term, array_map('strtolower', $item['keywords']));
-            })
-            ->values()
-            ->toArray();
+        // 4. Extract or fallback FAQs
+        $faqs = $this->extractOrFilterFaqs($term);
 
         return [
             'query' => $query,
@@ -106,8 +106,52 @@ class KnowledgeService
                 'features' => $e->features ?? [],
             ])->toArray(),
             'matched_properties' => $properties->toArray(),
+            'matched_knowledge' => $matchedKnowledge->toArray(),
             'matched_faqs' => $faqs,
         ];
+    }
+
+    /**
+     * Query ONLY active, non-expired knowledge records matching a search term and optional category.
+     *
+     * @return Collection<int, KnowledgeRecord>
+     */
+    public function searchActiveKnowledge(string $term, ?string $category = null, int $limit = 6): Collection
+    {
+        $query = KnowledgeRecord::query()
+            ->active()
+            ->prioritized();
+
+        if (! empty($category)) {
+            $query->category($category);
+        }
+
+        if (! empty($term)) {
+            $query->search($term);
+        }
+
+        $records = $query->take($limit)->get();
+
+        // If specific search returned few results or term was specific estate,
+        // supplement with top prioritized company info / trust records (if not already included)
+        if ($records->count() < $limit && empty($category)) {
+            $existingIds = $records->pluck('id')->toArray();
+            $supplements = KnowledgeRecord::query()
+                ->active()
+                ->whereIn('category', [
+                    KnowledgeCategory::CompanyInformation->value,
+                    KnowledgeCategory::ObjectionHandling->value,
+                    KnowledgeCategory::PaymentPolicy->value,
+                ])
+                ->whereNotIn('id', $existingIds)
+                ->prioritized()
+                ->take($limit - $records->count())
+                ->get();
+
+            $records = $records->merge($supplements);
+        }
+
+        return $records;
     }
 
     /**
@@ -120,7 +164,7 @@ class KnowledgeService
         $out = "=== AUTHORITATIVE BAMCOM REAL ESTATE GROUND TRUTH ===\n";
         $out .= "The following information is retrieved directly from Bamcom's live database. It represents 100% verified facts. NEVER contradict or invent prices, titles, or units.\n\n";
 
-        // Estates Section
+        // Estates Section (Live Database)
         if (! empty($search['matched_estates'])) {
             $out .= "## ESTATES:\n";
             foreach ($search['matched_estates'] as $est) {
@@ -129,9 +173,9 @@ class KnowledgeService
             $out .= "\n";
         }
 
-        // Properties Section
+        // Properties Section (Live Property Database: Prices, Promo, Availability)
         if (! empty($search['matched_properties'])) {
-            $out .= "## AVAILABLE INVENTORY:\n";
+            $out .= "## AVAILABLE INVENTORY (LIVE DATABASE PRICING & UNITS):\n";
             foreach ($search['matched_properties'] as $prop) {
                 $priceStr = $prop['pricing']['has_active_promo']
                     ? "Promo: {$prop['pricing']['effective_price_formatted']} (Save {$prop['pricing']['savings_formatted']})"
@@ -151,9 +195,57 @@ class KnowledgeService
             }
         }
 
+        // Active Knowledge Base Records Grouped by Category
+        if (! empty($search['matched_knowledge'])) {
+            $grouped = collect($search['matched_knowledge'])->groupBy(function ($record) {
+                return $record instanceof KnowledgeRecord
+                    ? $record->category->value
+                    : ($record['category'] ?? 'general');
+            });
+
+            // Company Info & Policies
+            $companyRecords = $grouped->get(KnowledgeCategory::CompanyInformation->value, collect())
+                ->merge($grouped->get(KnowledgeCategory::PaymentPolicy->value, collect()))
+                ->merge($grouped->get(KnowledgeCategory::InspectionPolicy->value, collect()));
+
+            if ($companyRecords->isNotEmpty()) {
+                $out .= "## CORPORATE CREDENTIALS & POLICIES:\n";
+                foreach ($companyRecords as $rec) {
+                    $title = $rec instanceof KnowledgeRecord ? $rec->title : $rec['title'];
+                    $content = $rec instanceof KnowledgeRecord ? $rec->content : $rec['content'];
+                    $out .= "### {$title}\n{$content}\n\n";
+                }
+            }
+
+            // Objection Handling & Sales Scripts (Guidance for AI tone and answers)
+            $salesRecords = $grouped->get(KnowledgeCategory::ObjectionHandling->value, collect())
+                ->merge($grouped->get(KnowledgeCategory::SalesScript->value, collect()))
+                ->merge($grouped->get(KnowledgeCategory::SalesInformation->value, collect()));
+
+            if ($salesRecords->isNotEmpty()) {
+                $out .= "## APPROVED SALES STRATEGY & OBJECTION GUIDANCE:\n";
+                foreach ($salesRecords as $rec) {
+                    $title = $rec instanceof KnowledgeRecord ? $rec->title : $rec['title'];
+                    $content = $rec instanceof KnowledgeRecord ? $rec->content : $rec['content'];
+                    $out .= "### {$title}\n{$content}\n\n";
+                }
+            }
+
+            // Property Qualitative Knowledge (Topography, Neighborhood Corridor)
+            $propKnowledge = $grouped->get(KnowledgeCategory::PropertyKnowledge->value, collect());
+            if ($propKnowledge->isNotEmpty()) {
+                $out .= "## PROPERTY & REGIONAL KNOWLEDGE:\n";
+                foreach ($propKnowledge as $rec) {
+                    $title = $rec instanceof KnowledgeRecord ? $rec->title : $rec['title'];
+                    $content = $rec instanceof KnowledgeRecord ? $rec->content : $rec['content'];
+                    $out .= "### {$title}\n{$content}\n\n";
+                }
+            }
+        }
+
         // FAQs Section
         if (! empty($search['matched_faqs'])) {
-            $out .= "## FREQUENTLY ASKED QUESTIONS & POLICIES:\n";
+            $out .= "## FREQUENTLY ASKED QUESTIONS:\n";
             foreach ($search['matched_faqs'] as $faq) {
                 $out .= "Q: {$faq['question']}\nA: {$faq['answer']}\n\n";
             }
@@ -163,11 +255,78 @@ class KnowledgeService
     }
 
     /**
-     * Standard company legitimacy and policy FAQs.
+     * Retrieve authoritative FAQs from active knowledge records, with safe fallback.
      *
      * @return list<array{question: string, answer: string, keywords: list<string>}>
      */
     public function getCompanyFaqs(): array
+    {
+        $dbRecords = KnowledgeRecord::query()
+            ->active()
+            ->category(KnowledgeCategory::Faq)
+            ->prioritized()
+            ->get();
+
+        if ($dbRecords->isNotEmpty()) {
+            return $dbRecords->map(fn (KnowledgeRecord $rec): array => [
+                'question' => $rec->title,
+                'answer' => $rec->content,
+                'keywords' => $rec->keywords ?? [],
+            ])->toArray();
+        }
+
+        return $this->getDefaultFaqs();
+    }
+
+    /**
+     * Filter active FAQs matching query term.
+     *
+     * @return list<array{question: string, answer: string, keywords: list<string>}>
+     */
+    protected function extractOrFilterFaqs(string $term): array
+    {
+        return collect($this->getCompanyFaqs())
+            ->filter(function (array $item) use ($term): bool {
+                if (empty($term)) {
+                    return true;
+                }
+
+                return str_contains(strtolower($item['question']), $term)
+                    || str_contains(strtolower($item['answer']), $term)
+                    || in_array($term, array_map('strtolower', $item['keywords']));
+            })
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * Retrieve count summary of active knowledge records by category.
+     *
+     * @return array<string, int>
+     */
+    public function getActiveKnowledgeRecordsSummary(): array
+    {
+        $counts = KnowledgeRecord::query()
+            ->active()
+            ->selectRaw('category, count(*) as count')
+            ->groupBy('category')
+            ->pluck('count', 'category')
+            ->toArray();
+
+        $summary = [];
+        foreach (KnowledgeCategory::cases() as $category) {
+            $summary[$category->value] = $counts[$category->value] ?? 0;
+        }
+
+        return $summary;
+    }
+
+    /**
+     * Fallback foundation FAQs for cold starts and offline unit testing.
+     *
+     * @return list<array{question: string, answer: string, keywords: list<string>}>
+     */
+    protected function getDefaultFaqs(): array
     {
         return [
             [

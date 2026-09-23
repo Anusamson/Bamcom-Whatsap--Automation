@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             PropertySeeder::class,
             DealSeeder::class,
             WhatsAppSeeder::class,
+            KnowledgeRecordSeeder::class,
         ]);
     }
 }

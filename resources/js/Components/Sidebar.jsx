@@ -17,7 +17,8 @@ import {
     Building2,
     MapPin,
     Handshake,
-    MessageSquare
+    MessageSquare,
+    BookOpen
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -52,6 +53,14 @@ export default function Sidebar({
             icon: MessageSquare,
             badge: 'Live',
             badgeColor: 'bg-emerald-500 text-white',
+        },
+        {
+            name: 'AI Knowledge Base',
+            href: route('knowledge.index'),
+            active: route().current('knowledge.*'),
+            icon: BookOpen,
+            badge: 'Grounding',
+            badgeColor: 'bg-indigo-600 text-white',
         },
         {
             name: 'Sales Leads',

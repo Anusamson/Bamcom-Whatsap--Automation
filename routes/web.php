@@ -4,6 +4,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ConversationInboxController;
 use App\Http\Controllers\DealController;
 use App\Http\Controllers\EstateController;
+use App\Http\Controllers\KnowledgeRecordController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PipelineController;
@@ -89,6 +90,10 @@ Route::middleware('auth')->group(function () {
     Route::patch('/inbox/{conversation}/assign', [ConversationInboxController::class, 'assign'])->name('inbox.assign');
     Route::post('/inbox/{conversation}/read', [ConversationInboxController::class, 'markRead'])->name('inbox.read');
     Route::post('/inbox/{conversation}/inspections', [ConversationInboxController::class, 'scheduleInspection'])->name('inbox.inspections.store');
+
+    // AI Knowledge Base Subsystem
+    Route::patch('/knowledge/{knowledge}/toggle-status', [KnowledgeRecordController::class, 'toggleStatus'])->name('knowledge.toggle-status');
+    Route::resource('knowledge', KnowledgeRecordController::class);
 });
 
 require __DIR__.'/auth.php';

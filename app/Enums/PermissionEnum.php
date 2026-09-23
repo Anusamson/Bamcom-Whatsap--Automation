@@ -91,6 +91,12 @@ enum PermissionEnum: string
     case ConversationsAssign = 'conversations.assign';
     case MessagesSend = 'messages.send';
 
+    // AI Knowledge Base Management
+    case KnowledgeView = 'knowledge.view';
+    case KnowledgeCreate = 'knowledge.create';
+    case KnowledgeEdit = 'knowledge.edit';
+    case KnowledgeDelete = 'knowledge.delete';
+
     // System Settings & Maintenance
     case SettingsView = 'settings.view';
     case SettingsEdit = 'settings.edit';
@@ -140,6 +146,9 @@ enum PermissionEnum: string
 
             self::ConversationsView, self::ConversationsManage,
             self::ConversationsAssign, self::MessagesSend => 'Conversations & Messaging',
+
+            self::KnowledgeView, self::KnowledgeCreate,
+            self::KnowledgeEdit, self::KnowledgeDelete => 'AI Knowledge Base',
 
             self::SettingsView, self::SettingsEdit, self::SystemHealth => 'System Settings',
         };
@@ -221,6 +230,11 @@ enum PermissionEnum: string
             self::ConversationsManage => 'Manage Conversation Status & Mode',
             self::ConversationsAssign => 'Assign Conversations to Reps',
             self::MessagesSend => 'Send Messages in Conversations',
+
+            self::KnowledgeView => 'View AI Knowledge Base',
+            self::KnowledgeCreate => 'Create Knowledge Records',
+            self::KnowledgeEdit => 'Edit Knowledge Records',
+            self::KnowledgeDelete => 'Delete Knowledge Records',
 
             self::SettingsView => 'View System Settings',
             self::SettingsEdit => 'Modify System Settings',

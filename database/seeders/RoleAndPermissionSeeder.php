@@ -111,6 +111,10 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionEnum::ConversationsManage->value,
             PermissionEnum::ConversationsAssign->value,
             PermissionEnum::MessagesSend->value,
+            PermissionEnum::KnowledgeView->value,
+            PermissionEnum::KnowledgeCreate->value,
+            PermissionEnum::KnowledgeEdit->value,
+            PermissionEnum::KnowledgeDelete->value,
             PermissionEnum::SettingsView->value,
             PermissionEnum::SystemHealth->value,
         ]);
