@@ -18,7 +18,8 @@ import {
     MapPin,
     Handshake,
     MessageSquare,
-    BookOpen
+    BookOpen,
+    Flame
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -69,6 +70,14 @@ export default function Sidebar({
             icon: TrendingUp,
             badge: 'Leads',
             badgeColor: 'bg-amber-500 text-white',
+        },
+        {
+            name: 'Lead Scoring',
+            href: route('lead-scoring.index'),
+            active: route().current('lead-scoring.*'),
+            icon: Flame,
+            badge: 'Rules',
+            badgeColor: 'bg-rose-500 text-white',
         },
         {
             name: 'Pipeline Kanban',

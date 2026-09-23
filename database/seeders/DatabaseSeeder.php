@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             DealSeeder::class,
             WhatsAppSeeder::class,
             KnowledgeRecordSeeder::class,
+            LeadScoringRuleSeeder::class,
         ]);
     }
 }

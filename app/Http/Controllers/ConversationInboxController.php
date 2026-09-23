@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Models\WhatsAppTemplate;
 use App\Services\AI\HandoverService;
 use App\Services\Conversation\ConversationService;
+use App\Services\Lead\LeadScoringService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -232,6 +233,19 @@ class ConversationInboxController extends Controller
                 'status' => 'scheduled',
             ],
         ]);
+
+        // Award lead scoring points for site inspection request
+        app(LeadScoringService::class)->recordEvent(
+            $lead,
+            'inspection_request',
+            [
+                'estate_name' => $validated['estate_name'],
+                'inspection_date' => $validated['inspection_date'],
+                'inspection_time' => $validated['inspection_time'],
+            ],
+            $request->user(),
+            source: 'inbox_manual'
+        );
 
         return back()->with('success', "Inspection scheduled at {$validated['estate_name']}.");
     }

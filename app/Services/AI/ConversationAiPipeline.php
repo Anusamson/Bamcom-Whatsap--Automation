@@ -2,6 +2,7 @@
 
 namespace App\Services\AI;
 
+use App\Enums\AIIntent;
 use App\Enums\ConversationMode;
 use App\Enums\ConversationStatus;
 use App\Jobs\SendWhatsAppResponseJob;
@@ -11,6 +12,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Services\AI\Safety\AISafetyValidator;
 use App\Services\Conversation\ConversationService;
+use App\Services\Lead\LeadScoringService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -107,6 +109,26 @@ class ConversationAiPipeline
                 'confidence' => $intentResult->confidence,
                 'mode' => $conversation->mode->value,
             ]);
+
+            // Record intent-based lead scoring milestones
+            $activeLead = $conversation->contact?->leads()->latest()->first();
+            if ($activeLead) {
+                if ($intentResult->intent === AIIntent::PricingInquiry) {
+                    app(LeadScoringService::class)->recordEvent(
+                        $activeLead,
+                        'price_enquiry',
+                        ['message' => $messageText],
+                        source: 'ai_agent'
+                    );
+                } elseif ($intentResult->intent === AIIntent::PaymentPlan) {
+                    app(LeadScoringService::class)->recordEvent(
+                        $activeLead,
+                        'payment_plan_enquiry',
+                        ['message' => $messageText],
+                        source: 'ai_agent'
+                    );
+                }
+            }
 
             // 4. Check for AI-to-Human Handover Triggers (7 Triggers via HandoverService)
             $handoverTrigger = $this->handoverService->detectTrigger($conversation, $messageText, $intentResult);

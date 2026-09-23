@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\DealController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\LeadController;
+use App\Http\Controllers\Api\V1\LeadScoringRuleController;
 use App\Http\Controllers\Api\V1\MessageController;
 use App\Http\Controllers\Api\V1\PipelineController;
 use App\Http\Controllers\Api\V1\PropertyController;
@@ -86,5 +87,14 @@ Route::prefix('v1')->group(function (): void {
         // Conversation Messages
         Route::get('/conversations/{conversation}/messages', [MessageController::class, 'index'])->name('api.v1.conversations.messages.index');
         Route::post('/conversations/{conversation}/messages', [MessageController::class, 'store'])->name('api.v1.conversations.messages.store');
+
+        // Configurable Lead Scoring Management & Events
+        Route::get('/lead-scoring/rules', [LeadScoringRuleController::class, 'index'])->name('api.v1.lead-scoring.rules.index');
+        Route::put('/lead-scoring/rules/{rule}', [LeadScoringRuleController::class, 'update'])->name('api.v1.lead-scoring.rules.update');
+        Route::patch('/lead-scoring/rules/{rule}', [LeadScoringRuleController::class, 'update']);
+        Route::post('/lead-scoring/rules/{rule}/toggle', [LeadScoringRuleController::class, 'toggle'])->name('api.v1.lead-scoring.rules.toggle');
+        Route::post('/lead-scoring/reset-defaults', [LeadScoringRuleController::class, 'resetDefaults'])->name('api.v1.lead-scoring.reset-defaults');
+        Route::post('/leads/{lead}/score-event', [LeadScoringRuleController::class, 'recordEvent'])->name('api.v1.leads.score-event');
+        Route::get('/leads/{lead}/score-history', [LeadScoringRuleController::class, 'history'])->name('api.v1.leads.score-history');
     });
 });

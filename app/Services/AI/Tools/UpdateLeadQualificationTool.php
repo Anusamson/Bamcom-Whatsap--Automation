@@ -10,6 +10,7 @@ use App\Enums\QualificationStatus;
 use App\Models\Activity;
 use App\Models\Contact;
 use App\Models\Lead;
+use App\Services\Lead\LeadScoringService;
 
 /**
  * Controlled Tool: updateLeadQualification
@@ -155,6 +156,10 @@ class UpdateLeadQualificationTool implements AIToolInterface
 
         if (! empty($updates)) {
             $lead->update($updates);
+
+            // Trigger configurable scoring rules for newly supplied profile parameters
+            app(LeadScoringService::class)->evaluateProfileEvents($lead);
+            $lead->refresh();
 
             // Record CRM Activity log
             Activity::create([

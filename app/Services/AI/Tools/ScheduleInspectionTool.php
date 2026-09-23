@@ -6,6 +6,7 @@ use App\Enums\LeadTemperature;
 use App\Models\Activity;
 use App\Models\Contact;
 use App\Models\Property;
+use App\Services\Lead\LeadScoringService;
 
 /**
  * Controlled Tool: scheduleInspection
@@ -74,12 +75,22 @@ class ScheduleInspectionTool implements AIToolInterface
 
         $lead = $contact instanceof Contact ? $contact->leads()->latest()->first() : null;
 
-        // Automatically upgrade lead to Hot when inspection is requested
+        // Award lead scoring points for site inspection request
         if ($lead) {
-            $lead->update([
-                'temperature' => LeadTemperature::Hot,
-                'score' => max(85, (int) $lead->score + 20),
-            ]);
+            app(LeadScoringService::class)->recordEvent(
+                $lead,
+                'inspection_request',
+                ['date' => $date, 'time' => $time, 'property' => $propertyTitle],
+                source: 'ai_agent'
+            );
+
+            $lead->refresh();
+            if ($lead->temperature !== LeadTemperature::Hot) {
+                $lead->update([
+                    'temperature' => LeadTemperature::Hot,
+                    'score' => max(60, (int) $lead->score),
+                ]);
+            }
         }
 
         // Record scheduled inspection activity in CRM

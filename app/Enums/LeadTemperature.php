@@ -56,4 +56,20 @@ enum LeadTemperature: string
     {
         return array_column(self::cases(), 'value');
     }
+
+    /**
+     * Resolve temperature enum from numeric lead score.
+     *
+     * Cold: 0 - 29
+     * Warm: 30 - 59
+     * Hot:  60+
+     */
+    public static function fromScore(int $score): self
+    {
+        return match (true) {
+            $score >= 60 => self::Hot,
+            $score >= 30 => self::Warm,
+            default => self::Cold,
+        };
+    }
 }

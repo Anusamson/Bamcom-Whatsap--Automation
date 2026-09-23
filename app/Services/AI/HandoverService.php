@@ -14,6 +14,7 @@ use App\Models\Conversation;
 use App\Models\User;
 use App\Notifications\HandoverRequiredNotification;
 use App\Services\AI\DTOs\IntentResult;
+use App\Services\Lead\LeadScoringService;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
@@ -100,7 +101,7 @@ class HandoverService
         if ($lead) {
             $isHotTemp = $lead->temperature instanceof LeadTemperature
                 ? $lead->temperature === LeadTemperature::Hot
-                : (strtolower((string) $lead->temperature) === 'hot');
+                : (is_string($lead->temperature) && strtolower($lead->temperature) === 'hot');
 
             if ($lead->score >= 70 || $isHotTemp || (bool) $lead->is_hot) {
                 // If the lead has high intent and is actively asking about purchasing
@@ -207,6 +208,18 @@ class HandoverService
                     'trigger' => $trigger->value,
                 ],
             ]);
+        }
+
+        // Award lead scoring points for payment readiness / process request
+        $lead = $contact?->leads()->latest()->first();
+        if ($lead && $trigger === HandoverTrigger::PaymentReadiness) {
+            app(LeadScoringService::class)->recordEvent(
+                $lead,
+                'payment_process_request',
+                ['reason' => $reason],
+                $assignedUser,
+                source: 'ai_agent'
+            );
         }
 
         Log::info("Handover executed for conversation #{$conversation->id}", [

@@ -195,6 +195,16 @@ class Lead extends Model
     }
 
     /**
+     * Historical lead scoring logs and progression.
+     *
+     * @return HasMany<LeadScoreLog, $this>
+     */
+    public function scoreLogs(): HasMany
+    {
+        return $this->hasMany(LeadScoreLog::class)->latest();
+    }
+
+    /**
      * Formatted budget string with Nigerian Naira (₦) symbol.
      */
     protected function formattedBudget(): Attribute

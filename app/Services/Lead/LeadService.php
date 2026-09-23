@@ -11,10 +11,19 @@ use App\Enums\QualificationStatus;
 use App\Models\Contact;
 use App\Models\Lead;
 use App\Services\BaseService;
+use Illuminate\Container\Container;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class LeadService extends BaseService
 {
+    public function __construct(
+        protected ?LeadScoringService $scoringService = null
+    ) {
+        if (! $this->scoringService && function_exists('app') && class_exists(Container::class) && Container::getInstance()) {
+            $this->scoringService = app(LeadScoringService::class);
+        }
+    }
+
     /**
      * Get paginated sales leads with multi-faceted filtering.
      *
@@ -101,6 +110,10 @@ class LeadService extends BaseService
             // Update contact's last contact timestamp
             Contact::where('id', $lead->contact_id)->update(['last_contact_at' => now()]);
 
+            // Evaluate configurable scoring rules for initial enquiry and profile
+            $this->scoringService?->recordEvent($lead, 'new_enquiry');
+            $this->scoringService?->evaluateProfileEvents($lead);
+
             $this->logInfo('Lead opportunity created', [
                 'lead_id' => $lead->id,
                 'uuid' => $lead->uuid,
@@ -126,6 +139,9 @@ class LeadService extends BaseService
             }
 
             $lead->update($attributes);
+
+            // Check if updated attributes satisfy scoring rules
+            $this->scoringService?->evaluateProfileEvents($lead);
 
             $this->logInfo('Lead opportunity updated', [
                 'lead_id' => $lead->id,

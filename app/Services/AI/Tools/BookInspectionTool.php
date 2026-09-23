@@ -6,6 +6,7 @@ use App\Models\Activity;
 use App\Models\Conversation;
 use App\Models\Estate;
 use App\Models\Lead;
+use App\Services\Lead\LeadScoringService;
 use InvalidArgumentException;
 
 /**
@@ -98,6 +99,14 @@ class BookInspectionTool implements AIToolInterface
                 'status' => 'scheduled',
             ],
         ]);
+
+        // Award lead scoring points for site inspection request
+        app(LeadScoringService::class)->recordEvent(
+            $lead,
+            'inspection_request',
+            ['estate_name' => $verifiedEstateName, 'date' => $date, 'time' => $time],
+            source: 'ai_agent'
+        );
 
         return [
             'success' => true,

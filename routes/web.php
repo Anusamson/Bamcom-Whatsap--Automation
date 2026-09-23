@@ -6,6 +6,7 @@ use App\Http\Controllers\DealController;
 use App\Http\Controllers\EstateController;
 use App\Http\Controllers\KnowledgeRecordController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\LeadScoringRuleController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\ProfileController;
@@ -96,6 +97,11 @@ Route::middleware('auth')->group(function () {
     // AI Knowledge Base Subsystem
     Route::patch('/knowledge/{knowledge}/toggle-status', [KnowledgeRecordController::class, 'toggleStatus'])->name('knowledge.toggle-status');
     Route::resource('knowledge', KnowledgeRecordController::class);
+
+    // Configurable Lead Scoring Subsystem
+    Route::patch('/settings/lead-scoring/{leadScoringRule}/toggle', [LeadScoringRuleController::class, 'toggleActive'])->name('lead-scoring.toggle');
+    Route::post('/settings/lead-scoring/reset-defaults', [LeadScoringRuleController::class, 'resetDefaults'])->name('lead-scoring.reset-defaults');
+    Route::resource('/settings/lead-scoring', LeadScoringRuleController::class)->parameters(['lead-scoring' => 'leadScoringRule'])->names('lead-scoring');
 });
 
 require __DIR__.'/auth.php';
