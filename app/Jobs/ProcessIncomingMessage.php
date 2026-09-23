@@ -161,6 +161,9 @@ class ProcessIncomingMessage implements ShouldQueue
                     'message_id' => $crmMessage->id,
                 ],
             ]);
+
+            // 11. Dispatch AI Sales Agent conversation pipeline
+            ProcessConversationAiTurn::dispatch($conversation, $crmMessage);
         } catch (Throwable $e) {
             Log::error("Failed to process incoming WhatsApp message [{$metaMessageId}]: {$e->getMessage()}", [
                 'event_id' => $this->event->id,

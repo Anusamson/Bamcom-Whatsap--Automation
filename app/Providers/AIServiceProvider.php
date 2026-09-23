@@ -6,11 +6,13 @@ use App\Services\AI\AIOrchestrator;
 use App\Services\AI\BamcomSalesAgent;
 use App\Services\AI\ContextBuilder;
 use App\Services\AI\Contracts\AIProviderInterface;
+use App\Services\AI\ConversationAiPipeline;
 use App\Services\AI\IntentClassifier;
 use App\Services\AI\KnowledgeService;
 use App\Services\AI\Providers\GeminiProvider;
 use App\Services\AI\Providers\MockAIProvider;
 use App\Services\AI\Providers\OpenAIProvider;
+use App\Services\AI\Safety\AISafetyValidator;
 use App\Services\AI\Tools\CheckAvailabilityTool;
 use App\Services\AI\Tools\CreateSalesTaskTool;
 use App\Services\AI\Tools\GetContactProfileTool;
@@ -22,6 +24,7 @@ use App\Services\AI\Tools\ScheduleInspectionTool;
 use App\Services\AI\Tools\SearchPropertiesTool;
 use App\Services\AI\Tools\ToolRegistry;
 use App\Services\AI\Tools\UpdateLeadQualificationTool;
+use App\Services\Conversation\ConversationService;
 use App\Services\Property\PropertyIntelligenceService;
 use Illuminate\Support\ServiceProvider;
 
@@ -102,6 +105,21 @@ class AIServiceProvider extends ServiceProvider
                 toolRegistry: $app->make(ToolRegistry::class),
                 knowledgeService: $app->make(KnowledgeService::class),
                 contextBuilder: $app->make(ContextBuilder::class)
+            );
+        });
+
+        // 8. Register AISafetyValidator
+        $this->app->singleton(AISafetyValidator::class, function (): AISafetyValidator {
+            return new AISafetyValidator;
+        });
+
+        // 9. Register ConversationAiPipeline
+        $this->app->singleton(ConversationAiPipeline::class, function ($app): ConversationAiPipeline {
+            return new ConversationAiPipeline(
+                agent: $app->make(BamcomSalesAgent::class),
+                intentClassifier: $app->make(IntentClassifier::class),
+                safetyValidator: $app->make(AISafetyValidator::class),
+                conversationService: $app->make(ConversationService::class)
             );
         });
     }

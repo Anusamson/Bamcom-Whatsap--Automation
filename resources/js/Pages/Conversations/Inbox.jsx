@@ -65,6 +65,11 @@ export default function Inbox({
     const [templateParams, setTemplateParams] = useState({});
 
     const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
+    const [dismissedSuggestionId, setDismissedSuggestionId] = useState(null);
+
+    const aiSuggestion = activeConversation?.metadata?.ai_suggestion;
+    const isAiProcessing = activeConversation?.metadata?.ai_processing;
+    const showSuggestion = aiSuggestion?.content && dismissedSuggestionId !== activeConversation?.id;
 
     // Message Input Form
     const { data: messageData, setData: setMessageData, post: postMessage, processing: sendingMessage, reset: resetMessage } = useForm({
@@ -673,6 +678,60 @@ export default function Inbox({
 
                             {/* Reply Composer Bar */}
                             <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+                                {/* AI Processing Indicator */}
+                                {isAiProcessing && (
+                                    <div className="mb-2 p-2 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 flex items-center justify-between text-xs text-purple-700 dark:text-purple-300 animate-pulse">
+                                        <div className="flex items-center gap-2">
+                                            <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                            <span className="font-medium">Bamcom AI Sales Agent is formulating a response...</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* AI Suggestion Card (Hybrid Mode) */}
+                                {showSuggestion && (
+                                    <div className="mb-2 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/40 dark:to-indigo-950/40 border border-purple-200 dark:border-purple-800 shadow-xs">
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <div className="flex items-center gap-2">
+                                                <span className="p-1 rounded-md bg-purple-600 text-white flex items-center justify-center">
+                                                    <Sparkles className="h-3.5 w-3.5" />
+                                                </span>
+                                                <span className="text-xs font-bold text-purple-900 dark:text-purple-200">
+                                                    AI Suggested Response
+                                                </span>
+                                                {aiSuggestion.intent && (
+                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-200/70 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
+                                                        {aiSuggestion.intent}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setDismissedSuggestionId(activeConversation.id)}
+                                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded"
+                                                title="Dismiss Suggestion"
+                                            >
+                                                <X className="h-3.5 w-3.5" />
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line line-clamp-3 mb-2 font-sans bg-white/60 dark:bg-slate-900/60 p-2 rounded-lg border border-purple-100 dark:border-purple-900/50">
+                                            {aiSuggestion.content}
+                                        </p>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setMessageData('body', aiSuggestion.content);
+                                                }}
+                                                className="px-2.5 py-1 text-xs font-medium rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition flex items-center gap-1 shadow-2xs"
+                                            >
+                                                <Check className="h-3 w-3" />
+                                                <span>Insert into Composer</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <form onSubmit={handleSendMessage} className="space-y-2">
                                     <div className="relative">
                                         <textarea
