@@ -9,7 +9,6 @@ use App\Http\Requests\Conversation\AssignConversationRequest;
 use App\Http\Requests\Conversation\SendMessageRequest;
 use App\Http\Requests\Conversation\UpdateConversationModeRequest;
 use App\Http\Requests\Conversation\UpdateConversationStatusRequest;
-use App\Models\Activity;
 use App\Models\Conversation;
 use App\Models\Estate;
 use App\Models\Lead;
@@ -17,7 +16,7 @@ use App\Models\User;
 use App\Models\WhatsAppTemplate;
 use App\Services\AI\HandoverService;
 use App\Services\Conversation\ConversationService;
-use App\Services\Lead\LeadScoringService;
+use App\Services\Inspection\InspectionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -218,34 +217,15 @@ class ConversationInboxController extends Controller
             ]);
         }
 
-        Activity::create([
-            'user_id' => $request->user()->id,
+        app(InspectionService::class)->scheduleInspection([
+            'contact_id' => $contact->id,
             'lead_id' => $lead->id,
-            'activity_type' => 'inspection_scheduled',
-            'description' => "Inspection scheduled at {$validated['estate_name']} for {$validated['inspection_date']} at {$validated['inspection_time']}.",
-            'properties' => [
-                'estate_name' => $validated['estate_name'],
-                'inspection_date' => $validated['inspection_date'],
-                'inspection_time' => $validated['inspection_time'],
-                'inspector_id' => $validated['inspector_id'] ?? null,
-                'scheduled_by' => $request->user()->name,
-                'notes' => $validated['notes'] ?? null,
-                'status' => 'scheduled',
-            ],
-        ]);
-
-        // Award lead scoring points for site inspection request
-        app(LeadScoringService::class)->recordEvent(
-            $lead,
-            'inspection_request',
-            [
-                'estate_name' => $validated['estate_name'],
-                'inspection_date' => $validated['inspection_date'],
-                'inspection_time' => $validated['inspection_time'],
-            ],
-            $request->user(),
-            source: 'inbox_manual'
-        );
+            'estate_name' => $validated['estate_name'],
+            'inspection_date' => $validated['inspection_date'],
+            'inspection_time' => $validated['inspection_time'],
+            'representative_id' => $validated['inspector_id'] ?? null,
+            'customer_notes' => $validated['notes'] ?? null,
+        ], $request->user());
 
         return back()->with('success', "Inspection scheduled at {$validated['estate_name']}.");
     }

@@ -172,6 +172,16 @@ class Contact extends Model
     }
 
     /**
+     * Site inspections requested or attended by this contact.
+     *
+     * @return HasMany<Inspection, $this>
+     */
+    public function inspections(): HasMany
+    {
+        return $this->hasMany(Inspection::class)->latest('inspection_date');
+    }
+
+    /**
      * Active (open or pending) conversation for this contact.
      *
      * @return HasOne<Conversation, $this>

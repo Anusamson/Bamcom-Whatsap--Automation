@@ -361,4 +361,14 @@ class Lead extends Model
 
         return $this->where('uuid', (string) $value)->first();
     }
+
+    /**
+     * Site inspections scheduled for this sales lead.
+     *
+     * @return HasMany<Inspection, $this>
+     */
+    public function inspections(): HasMany
+    {
+        return $this->hasMany(Inspection::class)->latest('inspection_date');
+    }
 }

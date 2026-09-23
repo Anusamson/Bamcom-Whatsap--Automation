@@ -4,6 +4,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ConversationInboxController;
 use App\Http\Controllers\DealController;
 use App\Http\Controllers\EstateController;
+use App\Http\Controllers\InspectionController;
 use App\Http\Controllers\KnowledgeRecordController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadScoringRuleController;
@@ -69,6 +70,13 @@ Route::middleware('auth')->group(function () {
     // Property Management & Estates
     Route::resource('estates', EstateController::class);
     Route::resource('properties', PropertyController::class);
+
+    // Site Inspections Management Subsystem
+    Route::get('/inspections/calendar', [InspectionController::class, 'calendar'])->name('inspections.calendar');
+    Route::post('/inspections/{inspection}/status', [InspectionController::class, 'updateStatus'])->name('inspections.status');
+    Route::post('/inspections/{inspection}/reschedule', [InspectionController::class, 'reschedule'])->name('inspections.reschedule');
+    Route::post('/inspections/{inspection}/assign', [InspectionController::class, 'assignRepresentative'])->name('inspections.assign');
+    Route::resource('inspections', InspectionController::class);
 
     // Sales Opportunities & Deals Module
     Route::match(['post', 'patch'], '/deals/{deal}/won', [DealController::class, 'markWon'])->name('deals.won');

@@ -2,9 +2,11 @@
 
 namespace App\Services\AI\Tools;
 
+use App\Enums\InspectionStatus;
 use App\Enums\LeadTemperature;
 use App\Models\Activity;
 use App\Models\Contact;
+use App\Models\Inspection;
 use App\Models\Property;
 use App\Services\Lead\LeadScoringService;
 
@@ -109,6 +111,21 @@ class ScheduleInspectionTool implements AIToolInterface
                 'booked_via' => 'BamcomSalesAgent',
             ],
         ]);
+
+        if ($contact instanceof Contact) {
+            Inspection::create([
+                'contact_id' => $contact->id,
+                'lead_id' => $lead?->id,
+                'property_id' => ! empty($arguments['property_id']) ? (int) $arguments['property_id'] : null,
+                'estate_name' => $propertyTitle,
+                'inspection_date' => $date,
+                'inspection_time' => $time,
+                'meeting_point' => 'Plot 12, Admiralty Way, Lekki Phase 1, Lagos',
+                'customer_notes' => $arguments['notes'] ?? null,
+                'status' => InspectionStatus::Scheduled,
+                'created_by_id' => auth()->id(),
+            ]);
+        }
 
         return [
             'success' => true,

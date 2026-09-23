@@ -164,6 +164,16 @@ class User extends Authenticatable
     }
 
     /**
+     * Site inspections assigned to this user as representative/field agent.
+     *
+     * @return HasMany<Inspection, $this>
+     */
+    public function assignedInspections(): HasMany
+    {
+        return $this->hasMany(Inspection::class, 'representative_id');
+    }
+
+    /**
      * Conversations assigned to this user/agent.
      *
      * @return HasMany<Conversation, $this>

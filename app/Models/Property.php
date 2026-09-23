@@ -168,6 +168,16 @@ class Property extends Model
     }
 
     /**
+     * Site inspections scheduled for this property.
+     *
+     * @return HasMany<Inspection, $this>
+     */
+    public function inspections(): HasMany
+    {
+        return $this->hasMany(Inspection::class)->latest('inspection_date');
+    }
+
+    /**
      * Associated deals and opportunities.
      *
      * @return HasMany<Deal, $this>

@@ -19,7 +19,8 @@ import {
     Handshake,
     MessageSquare,
     BookOpen,
-    Flame
+    Flame,
+    CalendarCheck
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -110,6 +111,14 @@ export default function Sidebar({
             icon: MapPin,
             badge: 'Estates',
             badgeColor: 'bg-teal-600 text-white',
+        },
+        {
+            name: 'Site Inspections',
+            href: route('inspections.index'),
+            active: route().current('inspections.*'),
+            icon: CalendarCheck,
+            badge: 'Field',
+            badgeColor: 'bg-blue-600 text-white',
         },
         {
             name: 'Users Directory',
