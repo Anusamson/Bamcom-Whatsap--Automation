@@ -3,6 +3,7 @@
 use App\Http\Controllers\AudienceController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\ContactImportController;
 use App\Http\Controllers\ConversationInboxController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DealController;
@@ -63,7 +64,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/teams/{team}/members/{user}', [TeamController::class, 'removeMember'])->name('teams.members.remove');
     Route::resource('teams', TeamController::class);
 
-    // CRM Contacts Module
+    // CRM Contacts Module & Batch Imports (CSV & Google Sheets)
+    Route::get('/contacts/import/template', [ContactImportController::class, 'downloadTemplate'])->name('contacts.import.template');
+    Route::post('/contacts/import/preview', [ContactImportController::class, 'preview'])->name('contacts.import.preview');
+    Route::post('/contacts/import/csv', [ContactImportController::class, 'importCsv'])->name('contacts.import.csv');
+    Route::post('/contacts/import/google-sheet', [ContactImportController::class, 'importGoogleSheet'])->name('contacts.import.google-sheet');
     Route::get('/contacts/{contact}/timeline', [ContactController::class, 'timeline'])->name('contacts.timeline');
     Route::patch('/contacts/{contact}/status', [ContactController::class, 'updateStatus'])->name('contacts.status');
     Route::post('/contacts/{contact}/touchpoint', [ContactController::class, 'logTouchpoint'])->name('contacts.touchpoint');

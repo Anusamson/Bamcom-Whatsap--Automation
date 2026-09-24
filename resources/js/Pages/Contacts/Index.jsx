@@ -20,9 +20,11 @@ import {
     Clock,
     ExternalLink,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Upload
 } from 'lucide-react';
 import { useState } from 'react';
+import ImportContactsModal from './Partials/ImportContactsModal';
 
 export default function Index({ contacts, filters, users, statuses, leadSources, metrics }) {
     const { auth, flash } = usePage().props;
@@ -36,6 +38,7 @@ export default function Index({ contacts, filters, users, statuses, leadSources,
     const [leadSource, setLeadSource] = useState(filters.lead_source || '');
     const [assignedUserId, setAssignedUserId] = useState(filters.assigned_user_id || '');
     const [perPage, setPerPage] = useState(filters.per_page || '15');
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
     const handleFilter = (e) => {
         e?.preventDefault();
@@ -126,15 +129,28 @@ export default function Index({ contacts, filters, users, statuses, leadSources,
                         </p>
                     </div>
 
-                    {can('contacts.create') && (
-                        <Link
-                            href={route('contacts.create')}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold rounded-xl shadow-sm transition duration-150 ease-in-out"
-                        >
-                            <UserPlus className="h-4 w-4" />
-                            <span>Add New Contact</span>
-                        </Link>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {can('contacts.create') && (
+                            <button
+                                type="button"
+                                onClick={() => setIsImportModalOpen(true)}
+                                className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-xl shadow-sm transition duration-150 ease-in-out"
+                            >
+                                <Upload className="h-4 w-4 text-slate-500" />
+                                <span>Import Contacts</span>
+                            </button>
+                        )}
+
+                        {can('contacts.create') && (
+                            <Link
+                                href={route('contacts.create')}
+                                className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold rounded-xl shadow-sm transition duration-150 ease-in-out"
+                            >
+                                <UserPlus className="h-4 w-4" />
+                                <span>Add New Contact</span>
+                            </Link>
+                        )}
+                    </div>
                 </div>
             }
         >
@@ -473,6 +489,14 @@ export default function Index({ contacts, filters, users, statuses, leadSources,
                     )}
                 </div>
             </div>
+
+            <ImportContactsModal
+                show={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                users={users}
+                statuses={statuses}
+                leadSources={leadSources}
+            />
         </AuthenticatedLayout>
     );
 }
