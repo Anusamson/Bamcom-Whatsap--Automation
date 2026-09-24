@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Services\Analytics\AnalyticsService;
-use Illuminate\Http\JsonResponse;
+use App\Services\Analytics\Exporters\CsvReportExporter;
+use App\Services\Analytics\Exporters\DocReportExporter;
+use App\Services\Analytics\Exporters\PdfReportExporter;
+use App\Services\Analytics\Exporters\PptReportExporter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -60,18 +63,27 @@ class ReportController extends Controller
     }
 
     /**
-     * Export raw report data in JSON format for the selected period.
+     * Export analytics and performance report in PDF, PPT, CSV, or DOC format.
      */
-    public function export(Request $request): JsonResponse
-    {
+    public function export(
+        Request $request,
+        PdfReportExporter $pdfExporter,
+        PptReportExporter $pptExporter,
+        CsvReportExporter $csvExporter,
+        DocReportExporter $docExporter
+    ): \Symfony\Component\HttpFoundation\Response {
         $dateRange = $this->analyticsService->resolveDateRange($request);
         $start = $dateRange['start'];
         $end = $dateRange['end'];
 
-        $data = [
-            'generated_at' => now()->toIso8601String(),
-            'period' => $dateRange,
-            'kpis' => $this->analyticsService->getDashboardKpis($start, $end),
+        $kpis = $this->analyticsService->getDashboardKpis(
+            $start,
+            $end,
+            $dateRange['previous_start'],
+            $dateRange['previous_end']
+        );
+
+        $reports = [
             'lead_source' => $this->analyticsService->getLeadSourceReport($start, $end),
             'pipeline_funnel' => $this->analyticsService->getPipelineFunnelReport($start, $end),
             'sales_performance' => $this->analyticsService->getSalesPerformanceReport($start, $end),
@@ -82,6 +94,19 @@ class ReportController extends Controller
             'human_handovers' => $this->analyticsService->getHumanHandoversReport($start, $end),
         ];
 
-        return response()->json($data);
+        $exportData = [
+            'dateRange' => $dateRange,
+            'kpis' => $kpis,
+            'reports' => $reports,
+        ];
+
+        $format = strtolower((string) $request->input('format', 'pdf'));
+
+        return match ($format) {
+            'csv' => $csvExporter->export($exportData),
+            'ppt', 'pptx' => $pptExporter->export($exportData),
+            'doc', 'docx', 'word' => $docExporter->export($exportData),
+            default => $pdfExporter->export($exportData),
+        };
     }
 }

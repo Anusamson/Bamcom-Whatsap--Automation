@@ -21,7 +21,11 @@ import {
     Sparkles,
     Layers,
     ShieldAlert,
-    Phone
+    Phone,
+    ChevronDown,
+    FileText,
+    Presentation,
+    FileSpreadsheet
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -35,6 +39,42 @@ export default function Index({
     const [selectedPeriod, setSelectedPeriod] = useState(dateRange.period || '30d');
     const [dateFrom, setDateFrom] = useState(dateRange.date_from || '');
     const [dateTo, setDateTo] = useState(dateRange.date_to || '');
+    const [exportOpen, setExportOpen] = useState(false);
+
+    const exportFormats = [
+        {
+            key: 'pdf',
+            label: 'PDF Document (.pdf)',
+            desc: 'Printable executive briefing with visual charts and scorecards',
+            badge: 'PDF',
+            color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-400',
+            icon: FileText
+        },
+        {
+            key: 'ppt',
+            label: 'PowerPoint Presentation (.ppt)',
+            desc: '16:9 slide deck designed for management and board reviews',
+            badge: 'PPT',
+            color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-400',
+            icon: Presentation
+        },
+        {
+            key: 'csv',
+            label: 'CSV Spreadsheet (.csv)',
+            desc: 'Raw structured tabular dataset compatible with Microsoft Excel',
+            badge: 'CSV',
+            color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400',
+            icon: FileSpreadsheet
+        },
+        {
+            key: 'doc',
+            label: 'Word Document (.doc)',
+            desc: 'Formatted operational document for Microsoft Word reporting',
+            badge: 'DOC',
+            color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-400',
+            icon: FileText
+        },
+    ];
 
     const handleTabChange = (tabKey) => {
         setSelectedTab(tabKey);
@@ -156,15 +196,69 @@ export default function Index({
                             </button>
                         </form>
 
-                        <a
-                            href={route('reports.export', { period: selectedPeriod, date_from: dateFrom, date_to: dateTo })}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white text-xs font-bold rounded-xl transition"
-                        >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>Export JSON</span>
-                        </a>
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setExportOpen(!exportOpen)}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold rounded-xl border border-indigo-200 dark:border-indigo-800 transition shadow-sm"
+                            >
+                                <Download className="w-3.5 h-3.5" />
+                                <span>Export Report</span>
+                                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${exportOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {exportOpen && (
+                                <>
+                                    <div
+                                        className="fixed inset-0 z-40"
+                                        onClick={() => setExportOpen(false)}
+                                    />
+                                    <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                                        <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+                                            <p className="text-[10px] uppercase tracking-wider font-extrabold text-gray-400">Export Analytics Data</p>
+                                            <p className="text-xs text-gray-600 dark:text-gray-300">Choose your desired report format:</p>
+                                        </div>
+                                        <div className="p-1 space-y-0.5">
+                                            {exportFormats.map((fmt) => {
+                                                const Icon = fmt.icon;
+                                                const exportUrl = route('reports.export', {
+                                                    format: fmt.key,
+                                                    period: selectedPeriod,
+                                                    date_from: dateFrom,
+                                                    date_to: dateTo,
+                                                    report: selectedTab
+                                                });
+                                                return (
+                                                    <a
+                                                        key={fmt.key}
+                                                        href={exportUrl}
+                                                        onClick={() => setExportOpen(false)}
+                                                        className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/60 transition group"
+                                                    >
+                                                        <div className={`p-2 rounded-lg ${fmt.color} mt-0.5 shrink-0`}>
+                                                            <Icon className="w-4 h-4" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-xs font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">
+                                                                    {fmt.label}
+                                                                </span>
+                                                                <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${fmt.color}`}>
+                                                                    {fmt.badge}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight mt-0.5">
+                                                                {fmt.desc}
+                                                            </p>
+                                                        </div>
+                                                    </a>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
 

@@ -148,39 +148,82 @@ class DashboardAndReportsTest extends TestCase
     }
 
     /**
-     * User can export comprehensive analytics JSON report.
+     * User can export analytics and performance report in PDF format.
      */
-    public function test_user_can_export_report_json(): void
+    public function test_user_can_export_report_pdf(): void
     {
         Deal::factory()->create([
             'status' => DealStatus::Won,
             'deal_value' => 15000000,
         ]);
 
-        $response = $this->actingAs($this->user)->get('/reports/export?period=30d');
+        $response = $this->actingAs($this->user)->get('/reports/export?format=pdf&period=30d');
 
         $response->assertOk();
-        $response->assertJsonStructure([
-            'generated_at',
-            'period' => ['start', 'end', 'period', 'label', 'date_from', 'date_to'],
-            'kpis' => [
-                'new_leads',
-                'hot_leads',
-                'active_conversations',
-                'inspections',
-                'open_deals',
-                'pipeline_value',
-                'sales_won',
-                'conversion_rate',
-            ],
-            'lead_source' => ['total_leads', 'sources'],
-            'pipeline_funnel' => ['total_volume', 'stages'],
-            'sales_performance' => ['total_deals', 'won_deals', 'win_rate'],
-            'agent_performance' => ['agents'],
-            'inspection_conversion' => ['total', 'completed', 'completion_rate'],
-            'campaign_performance' => ['total_campaigns', 'sent_count'],
-            'ai_conversations' => ['total_conversations', 'ai_conversations'],
-            'human_handovers' => ['total_handovers', 'triggers'],
+        $this->assertEquals('application/pdf', $response->headers->get('content-type'));
+        $this->assertStringContainsString('attachment; filename="bamcom_analytics_report_30d_', (string) $response->headers->get('content-disposition'));
+        $this->assertStringStartsWith('%PDF-1.4', $response->getContent());
+    }
+
+    /**
+     * User can export analytics and performance report in PPT / PowerPoint format.
+     */
+    public function test_user_can_export_report_ppt(): void
+    {
+        Deal::factory()->create([
+            'status' => DealStatus::Won,
+            'deal_value' => 15000000,
         ]);
+
+        $response = $this->actingAs($this->user)->get('/reports/export?format=ppt&period=30d');
+
+        $response->assertOk();
+        $this->assertStringContainsString('presentation', $response->headers->get('content-type'));
+        $this->assertStringContainsString('attachment; filename="bamcom_analytics_report_30d_', (string) $response->headers->get('content-disposition'));
+        $this->assertNotEmpty($response->getContent());
+    }
+
+    /**
+     * User can export analytics and performance report in CSV format.
+     */
+    public function test_user_can_export_report_csv(): void
+    {
+        Deal::factory()->create([
+            'status' => DealStatus::Won,
+            'deal_value' => 15000000,
+        ]);
+
+        $response = $this->actingAs($this->user)->get('/reports/export?format=csv&period=30d');
+
+        $response->assertOk();
+        $this->assertStringContainsString('text/csv', $response->headers->get('content-type'));
+        $this->assertStringContainsString('attachment; filename="bamcom_analytics_report_30d_', (string) $response->headers->get('content-disposition'));
+
+        // Streamed content assertion
+        ob_start();
+        $response->sendContent();
+        $content = ob_get_clean();
+
+        $this->assertStringContainsString('BAMCOM REAL ESTATE CRM - EXECUTIVE ANALYTICS REPORT', $content);
+        $this->assertStringContainsString('EXECUTIVE KEY PERFORMANCE INDICATORS', $content);
+    }
+
+    /**
+     * User can export analytics and performance report in DOC format.
+     */
+    public function test_user_can_export_report_doc(): void
+    {
+        Deal::factory()->create([
+            'status' => DealStatus::Won,
+            'deal_value' => 15000000,
+        ]);
+
+        $response = $this->actingAs($this->user)->get('/reports/export?format=doc&period=30d');
+
+        $response->assertOk();
+        $this->assertStringContainsString('application/msword', $response->headers->get('content-type'));
+        $this->assertStringContainsString('attachment; filename="bamcom_analytics_report_30d_', (string) $response->headers->get('content-disposition'));
+        $this->assertStringContainsString('xmlns:w="urn:schemas-microsoft-com:office:word"', $response->getContent());
+        $this->assertStringContainsString('BAMCOM REAL ESTATE CRM', $response->getContent());
     }
 }
