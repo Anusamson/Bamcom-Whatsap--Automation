@@ -84,7 +84,7 @@ class SequenceController extends Controller
     public function create(): Response
     {
         return Inertia::render('Sequences/Create', [
-            'pipelineStages' => PipelineStage::query()->orderBy('position')->get(['id', 'name', 'pipeline_id']),
+            'pipelineStages' => PipelineStage::query()->orderBy('order_column')->get(['id', 'name', 'pipeline_id']),
             'users' => User::query()->where('status', 'active')->orderBy('name')->get(['id', 'name', 'email', 'role']),
         ]);
     }
@@ -161,7 +161,7 @@ class SequenceController extends Controller
             'enrollments' => $enrollments,
             'metrics' => $metrics,
             'availableContacts' => $availableContacts,
-            'pipelineStages' => PipelineStage::query()->orderBy('position')->get(['id', 'name']),
+            'pipelineStages' => PipelineStage::query()->orderBy('order_column')->get(['id', 'name']),
             'users' => User::query()->where('status', 'active')->orderBy('name')->get(['id', 'name', 'email', 'role']),
         ]);
     }
@@ -175,7 +175,7 @@ class SequenceController extends Controller
 
         return Inertia::render('Sequences/Edit', [
             'sequence' => $sequence,
-            'pipelineStages' => PipelineStage::query()->orderBy('position')->get(['id', 'name', 'pipeline_id']),
+            'pipelineStages' => PipelineStage::query()->orderBy('order_column')->get(['id', 'name', 'pipeline_id']),
             'users' => User::query()->where('status', 'active')->orderBy('name')->get(['id', 'name', 'email', 'role']),
         ]);
     }
