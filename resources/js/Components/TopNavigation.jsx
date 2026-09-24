@@ -165,7 +165,7 @@ export default function TopNavigation({
 
                     <div className="flex items-center gap-2">
                         <span className="hidden sm:inline-block text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900">
-                            Bamcom AI CRM
+                            Bamcom CRM portal
                         </span>
                         {header && (
                             <div className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">

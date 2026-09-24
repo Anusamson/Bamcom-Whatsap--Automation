@@ -45,7 +45,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 <footer className="border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 py-3 px-4 sm:px-6 lg:px-8 transition-colors">
                     <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 dark:text-slate-400 gap-2">
                         <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-slate-700 dark:text-slate-200">Bamcom AI CRM</span>
+                            <span className="font-semibold text-slate-700 dark:text-slate-200">Bamcom CRM portal</span>
                             <span>&bull;</span>
                             <span>Phase 1 Architecture Foundation</span>
                         </div>
