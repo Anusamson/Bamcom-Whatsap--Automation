@@ -22,7 +22,8 @@ import {
     Flame,
     CalendarCheck,
     CheckSquare,
-    Workflow
+    Workflow,
+    Megaphone
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -105,6 +106,14 @@ export default function Sidebar({
             icon: Workflow,
             badge: 'Sequences',
             badgeColor: 'bg-purple-600 text-white',
+        },
+        {
+            name: 'WhatsApp Campaigns',
+            href: route('campaigns.index'),
+            active: route().current('campaigns.*') || route().current('audiences.*'),
+            icon: Megaphone,
+            badge: 'Broadcast',
+            badgeColor: 'bg-emerald-600 text-white',
         },
         {
             name: 'Deals & Opportunities',

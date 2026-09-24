@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\AudienceController;
+use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ConversationInboxController;
 use App\Http\Controllers\DealController;
@@ -105,6 +107,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/contacts/{contact}/opt-out', [SequenceController::class, 'optOutContact'])->name('contacts.opt-out');
     Route::post('/contacts/{contact}/opt-in', [SequenceController::class, 'optInContact'])->name('contacts.opt-in');
     Route::resource('sequences', SequenceController::class);
+
+    // WhatsApp Marketing Campaigns & Audiences Subsystem
+    Route::post('/audiences/preview', [AudienceController::class, 'preview'])->name('audiences.preview');
+    Route::resource('audiences', AudienceController::class)->except(['create', 'edit']);
+    Route::post('/campaigns/{campaign}/launch', [CampaignController::class, 'launch'])->name('campaigns.launch');
+    Route::post('/campaigns/{campaign}/pause', [CampaignController::class, 'pause'])->name('campaigns.pause');
+    Route::post('/campaigns/{campaign}/resume', [CampaignController::class, 'resume'])->name('campaigns.resume');
+    Route::post('/campaigns/{campaign}/cancel', [CampaignController::class, 'cancel'])->name('campaigns.cancel');
+    Route::resource('campaigns', CampaignController::class);
 
     // WhatsApp Business Platform Settings
     Route::get('/settings/whatsapp', [WhatsAppSettingsController::class, 'index'])->name('whatsapp.settings.index');

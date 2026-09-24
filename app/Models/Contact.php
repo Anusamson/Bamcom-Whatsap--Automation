@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CampaignRecipientStatus;
 use App\Enums\ContactStatus;
 use App\Enums\ConversationStatus;
 use App\Enums\LeadSource;
@@ -417,7 +418,15 @@ class Contact extends Model
     }
 
     /**
-     * Mark contact as opted-out and automatically cancel any active sequences.
+     * Campaign recipients for this contact.
+     */
+    public function campaignRecipients(): HasMany
+    {
+        return $this->hasMany(CampaignRecipient::class, 'contact_id');
+    }
+
+    /**
+     * Mark contact as opted-out and automatically cancel any active sequences and pending campaign messages.
      */
     public function optOut(?string $reason = 'Customer requested opt-out'): self
     {
@@ -433,6 +442,17 @@ class Contact extends Model
             'cancelled_at' => now(),
             'cancellation_reason' => 'Customer opted out of automated communications',
         ]);
+
+        // Cancel all pending campaign recipients
+        $this->campaignRecipients()
+            ->whereIn('status', [
+                CampaignRecipientStatus::Pending->value,
+                CampaignRecipientStatus::Queued->value,
+            ])
+            ->update([
+                'status' => CampaignRecipientStatus::OptedOut->value,
+                'error_message' => 'Customer opted out of marketing communications',
+            ]);
 
         return $this;
     }
