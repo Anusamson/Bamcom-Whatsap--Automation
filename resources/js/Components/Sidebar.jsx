@@ -54,6 +54,14 @@ export default function Sidebar({
             badgeColor: 'bg-indigo-600 text-white',
         },
         {
+            name: 'AI Sales Intelligence',
+            href: route('sales-intelligence.index'),
+            active: route().current('sales-intelligence.*'),
+            icon: Sparkles,
+            badge: 'AI Insights',
+            badgeColor: 'bg-purple-600 text-white',
+        },
+        {
             name: 'CRM Contacts',
             href: route('contacts.index'),
             active: route().current('contacts.*'),

@@ -18,6 +18,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SalesIntelligenceController;
 use App\Http\Controllers\SequenceController;
 use App\Http\Controllers\SmartListController;
 use App\Http\Controllers\TaskController;
@@ -128,6 +129,11 @@ Route::middleware('auth')->group(function () {
     // Executive Analytics & Performance Reports Subsystem
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+
+    // AI Sales Intelligence Subsystem
+    Route::get('/sales-intelligence', [SalesIntelligenceController::class, 'index'])->name('sales-intelligence.index');
+    Route::post('/sales-intelligence/generate', [SalesIntelligenceController::class, 'generate'])->name('sales-intelligence.generate');
+    Route::get('/sales-intelligence/{uuid}', [SalesIntelligenceController::class, 'show'])->name('sales-intelligence.show');
 
     // WhatsApp Business Platform Settings
     Route::get('/settings/whatsapp', [WhatsAppSettingsController::class, 'index'])->name('whatsapp.settings.index');
