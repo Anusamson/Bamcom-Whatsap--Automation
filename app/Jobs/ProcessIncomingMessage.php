@@ -14,6 +14,7 @@ use App\Models\WhatsAppMessage;
 use App\Models\WhatsAppWebhookEvent;
 use App\Services\Contact\PhoneNormalizerService;
 use App\Services\Conversation\ConversationService;
+use App\Services\Notifications\NotificationDispatchService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Carbon;
@@ -164,6 +165,9 @@ class ProcessIncomingMessage implements ShouldQueue
 
             // 11. Dispatch AI Sales Agent conversation pipeline
             ProcessConversationAiTurn::dispatch($conversation, $crmMessage);
+
+            // 12. Notify assigned staff / support of new customer reply
+            app(NotificationDispatchService::class)->notifyCustomerReply($crmMessage, $conversation);
         } catch (Throwable $e) {
             Log::error("Failed to process incoming WhatsApp message [{$metaMessageId}]: {$e->getMessage()}", [
                 'event_id' => $this->event->id,

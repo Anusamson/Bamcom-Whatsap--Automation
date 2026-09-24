@@ -90,6 +90,55 @@ export default function Inbox({
         notes: '',
     });
 
+    // Realtime live messages state & inbox counters
+    const [messages, setMessages] = useState(activeConversation?.messages || []);
+    const [liveCounts, setLiveCounts] = useState(counts);
+
+    useEffect(() => {
+        setMessages(activeConversation?.messages || []);
+    }, [activeConversation?.id]);
+
+    useEffect(() => {
+        setLiveCounts(counts);
+    }, [counts]);
+
+    // Lightweight delta sync polling for active conversation (every 3.5s)
+    useEffect(() => {
+        if (!activeConversation?.id) return;
+
+        const syncInterval = setInterval(async () => {
+            try {
+                const lastMsg = messages[messages.length - 1];
+                const afterId = lastMsg?.id || 0;
+                const url = `${route('inbox.sync')}?conversation_id=${activeConversation.id}&after_message_id=${afterId}`;
+                const res = await fetch(url, {
+                    headers: { 'Accept': 'application/json' },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.new_messages && data.new_messages.length > 0) {
+                        setMessages(prev => {
+                            const existingIds = new Set(prev.map(m => m.id));
+                            const unique = data.new_messages.filter(m => !existingIds.has(m.id));
+                            if (unique.length > 0) {
+                                return [...prev, ...unique];
+                            }
+                            return prev;
+                        });
+                        scrollToBottom();
+                    }
+                    if (data.counts) {
+                        setLiveCounts(data.counts);
+                    }
+                }
+            } catch {
+                // Ignore network interruptions
+            }
+        }, 3500);
+
+        return () => clearInterval(syncInterval);
+    }, [activeConversation?.id, messages]);
+
     // Auto-scroll message feed to bottom
     const messagesEndRef = useRef(null);
     const scrollToBottom = () => {
@@ -98,7 +147,7 @@ export default function Inbox({
 
     useEffect(() => {
         scrollToBottom();
-    }, [activeConversation?.messages]);
+    }, [messages]);
 
     // Handle filter tabs
     const handleTabChange = (tabKey) => {
@@ -302,14 +351,14 @@ export default function Inbox({
 
     // Filter pills definition
     const filterTabs = [
-        { key: 'all', label: 'All', count: counts.all, icon: Layers },
-        { key: 'mine', label: 'Mine', count: counts.mine, icon: User },
-        { key: 'unassigned', label: 'Unassigned', count: counts.unassigned, icon: SlidersHorizontal },
-        { key: 'unread', label: 'Unread', count: counts.unread, icon: MessageSquare },
-        { key: 'ai', label: 'AI', count: counts.ai, icon: Bot },
-        { key: 'human', label: 'Human', count: counts.human, icon: UserCheck },
-        { key: 'hybrid', label: 'Hybrid', count: counts.hybrid, icon: Sparkles },
-        { key: 'hot_leads', label: 'Hot Leads', count: counts.hot_leads, icon: Flame },
+        { key: 'all', label: 'All', count: liveCounts.all, icon: Layers },
+        { key: 'mine', label: 'Mine', count: liveCounts.mine, icon: User },
+        { key: 'unassigned', label: 'Unassigned', count: liveCounts.unassigned, icon: SlidersHorizontal },
+        { key: 'unread', label: 'Unread', count: liveCounts.unread, icon: MessageSquare },
+        { key: 'ai', label: 'AI', count: liveCounts.ai, icon: Bot },
+        { key: 'human', label: 'Human', count: liveCounts.human, icon: UserCheck },
+        { key: 'hybrid', label: 'Hybrid', count: liveCounts.hybrid, icon: Sparkles },
+        { key: 'hot_leads', label: 'Hot Leads', count: liveCounts.hot_leads, icon: Flame },
     ];
 
     return (
@@ -541,6 +590,14 @@ export default function Inbox({
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                                            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                                                <span className="relative flex h-2 w-2">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                </span>
+                                                Live Sync
+                                            </span>
+                                            <span>&bull;</span>
                                             <span>WhatsApp Business</span>
                                             <span>&bull;</span>
                                             <span>Last active {formatRelativeTime(activeConversation.last_message_at)}</span>
@@ -680,7 +737,7 @@ export default function Inbox({
 
                             {/* Conversation Message Stream */}
                             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50 dark:bg-slate-950/20">
-                                {activeConversation.messages?.length === 0 ? (
+                                {messages.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center h-full text-center text-slate-400 py-12">
                                         <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-2">
                                             <MessageSquare className="h-6 w-6 text-slate-400" />
@@ -691,7 +748,7 @@ export default function Inbox({
                                         </p>
                                     </div>
                                 ) : (
-                                    activeConversation.messages.map(msg => {
+                                    messages.map(msg => {
                                         const isInbound = msg.direction === 'inbound';
 
                                         return (

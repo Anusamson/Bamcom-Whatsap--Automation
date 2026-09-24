@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Notifications\HandoverRequiredNotification;
 use App\Services\AI\DTOs\IntentResult;
 use App\Services\Lead\LeadScoringService;
+use App\Services\Notifications\NotificationDispatchService;
 use App\Services\Task\TaskService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -170,10 +171,11 @@ class HandoverService
             'metadata' => $metadata,
         ]);
 
-        // 3. Representative Notification: Dispatch in-app notification to assigned rep
+        // 3. Representative Notification: Dispatch in-app notification to assigned rep and appropriate staff
         if ($assignedUser) {
             $assignedUser->notify(new HandoverRequiredNotification($conversation, $trigger, $reason));
         }
+        app(NotificationDispatchService::class)->notifyHumanHandover($conversation, $trigger->label(), $reason);
 
         // 4. Task Creation: Generate CRM sales follow-up task
         $task = $this->createFollowUpTask($conversation, $trigger, $assignedUser, $reason);

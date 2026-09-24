@@ -12,6 +12,7 @@ use App\Http\Controllers\KnowledgeRecordController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadScoringRuleController;
 use App\Http\Controllers\NoteController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\ProfileController;
@@ -140,9 +141,16 @@ Route::middleware('auth')->group(function () {
     Route::post('/settings/whatsapp/test-connection', [WhatsAppSettingsController::class, 'testConnection'])->name('whatsapp.settings.test-connection');
     Route::post('/settings/whatsapp/sync-templates', [WhatsAppSettingsController::class, 'syncTemplates'])->name('whatsapp.settings.sync-templates');
 
+    // Realtime Notifications & Alerts Subsystem
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
+
     // WhatsApp Team Inbox & Real-time Messaging
     Route::get('/inbox', [ConversationInboxController::class, 'index'])->name('conversations.inbox');
     Route::get('/conversations', [ConversationInboxController::class, 'index'])->name('conversations.index');
+    Route::get('/inbox/sync', [ConversationInboxController::class, 'sync'])->name('inbox.sync');
     Route::post('/inbox/{conversation}/messages', [ConversationInboxController::class, 'sendMessage'])->name('inbox.messages.store');
     Route::patch('/inbox/{conversation}/mode', [ConversationInboxController::class, 'updateMode'])->name('inbox.mode');
     Route::patch('/inbox/{conversation}/status', [ConversationInboxController::class, 'updateStatus'])->name('inbox.status');

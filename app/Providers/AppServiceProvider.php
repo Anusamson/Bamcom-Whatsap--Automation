@@ -3,7 +3,12 @@
 namespace App\Providers;
 
 use App\Listeners\AutomationEventSubscriber;
+use App\Listeners\NotificationEventSubscriber;
+use App\Models\Deal;
+use App\Models\Lead;
 use App\Models\User;
+use App\Observers\DealObserver;
+use App\Observers\LeadObserver;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
@@ -31,7 +36,12 @@ class AppServiceProvider extends ServiceProvider
             return $user->isSuperAdmin() ? true : null;
         });
 
-        // Register CRM Event-Driven Automation Subscriber
+        // Register CRM Event-Driven Automation Subscriber & Notification Subscriber
         Event::subscribe(AutomationEventSubscriber::class);
+        Event::subscribe(NotificationEventSubscriber::class);
+
+        // Model Observers for Real-time Notifications
+        Lead::observe(LeadObserver::class);
+        Deal::observe(DealObserver::class);
     }
 }

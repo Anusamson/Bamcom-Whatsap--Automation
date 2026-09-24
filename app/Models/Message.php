@@ -127,6 +127,16 @@ class Message extends Model
     }
 
     /**
+     * Alias for senderUser.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function sender(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'sender_id');
+    }
+
+    /**
      * Mark message as delivered.
      */
     public function markDelivered(?Carbon $timestamp = null): self

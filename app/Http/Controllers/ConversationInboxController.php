@@ -12,11 +12,13 @@ use App\Http\Requests\Conversation\UpdateConversationStatusRequest;
 use App\Models\Conversation;
 use App\Models\Estate;
 use App\Models\Lead;
+use App\Models\Message;
 use App\Models\User;
 use App\Models\WhatsAppTemplate;
 use App\Services\AI\HandoverService;
 use App\Services\Conversation\ConversationService;
 use App\Services\Inspection\InspectionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -270,5 +272,83 @@ class ConversationInboxController extends Controller
         ]);
 
         return back()->with('success', 'Conversation handed over to sales representative.');
+    }
+
+    /**
+     * Realtime lightweight delta sync for active conversation and inbox counters.
+     * Prevents polling the full inbox repeatedly.
+     */
+    public function sync(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $conversationId = $request->input('conversation_id');
+        $afterMessageId = $request->input('after_message_id');
+
+        $newMessages = [];
+        $activeMeta = null;
+
+        if ($conversationId) {
+            $conversation = Conversation::find($conversationId);
+            if ($conversation) {
+                $query = Message::where('conversation_id', $conversation->id);
+
+                if (! empty($afterMessageId)) {
+                    $query->where('id', '>', (int) $afterMessageId);
+                }
+
+                $newMessages = $query->with('sender')
+                    ->orderBy('id', 'asc')
+                    ->get()
+                    ->map(function (Message $msg): array {
+                        return [
+                            'id' => $msg->id,
+                            'conversation_id' => $msg->conversation_id,
+                            'contact_id' => $msg->contact_id,
+                            'direction' => $msg->direction,
+                            'sender_type' => $msg->sender_type,
+                            'type' => $msg->type,
+                            'body' => $msg->body,
+                            'media_url' => $msg->media_url,
+                            'media_mime_type' => $msg->media_mime_type,
+                            'media_metadata' => $msg->media_metadata,
+                            'delivery_status' => $msg->delivery_status?->value ?? $msg->delivery_status,
+                            'is_read' => (bool) $msg->is_read,
+                            'sent_at' => $msg->sent_at?->toIso8601String(),
+                            'created_at' => $msg->created_at?->toIso8601String(),
+                            'sender' => $msg->sender ? [
+                                'id' => $msg->sender->id,
+                                'name' => $msg->sender->name,
+                            ] : null,
+                        ];
+                    })
+                    ->values()
+                    ->toArray();
+
+                $activeMeta = [
+                    'id' => $conversation->id,
+                    'mode' => $conversation->mode->value,
+                    'mode_label' => $conversation->mode->label(),
+                    'status' => $conversation->status->value,
+                    'status_label' => $conversation->status->label(),
+                    'unread_count' => $conversation->unread_count,
+                    'assigned_user_id' => $conversation->assigned_user_id,
+                    'assigned_user' => $conversation->assignedUser ? [
+                        'id' => $conversation->assignedUser->id,
+                        'name' => $conversation->assignedUser->name,
+                    ] : null,
+                    'last_message_at' => $conversation->last_message_at?->toIso8601String(),
+                ];
+            }
+        }
+
+        $counts = $this->conversationService->getInboxFilterCounts($user);
+
+        return response()->json([
+            'new_messages' => $newMessages,
+            'conversation_meta' => $activeMeta,
+            'counts' => $counts,
+            'unread_notifications' => $user->unreadNotifications()->count(),
+            'timestamp' => now()->toIso8601String(),
+        ]);
     }
 }

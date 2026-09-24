@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link } from '@inertiajs/react';
 import { 
     LayoutDashboard, 
@@ -25,7 +26,8 @@ import {
     Workflow,
     Megaphone,
     ListFilter,
-    BarChart3
+    BarChart3,
+    Bell
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -36,6 +38,28 @@ export default function Sidebar({
     setIsMobileOpen, 
     user 
 }) {
+    const [unreadConversations, setUnreadConversations] = useState(0);
+
+    useEffect(() => {
+        const fetchCounters = async () => {
+            try {
+                const res = await fetch(route('notifications.unread-count'), {
+                    headers: { 'Accept': 'application/json' },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setUnreadConversations(data.unread_conversations || 0);
+                }
+            } catch {
+                // Ignore network errors
+            }
+        };
+
+        fetchCounters();
+        const timer = setInterval(fetchCounters, 15000);
+        return () => clearInterval(timer);
+    }, []);
+
     const navItems = [
         {
             name: 'Dashboard',
@@ -74,8 +98,8 @@ export default function Sidebar({
             href: route('conversations.inbox'),
             active: route().current('conversations.*'),
             icon: MessageSquare,
-            badge: 'Live',
-            badgeColor: 'bg-emerald-500 text-white',
+            badge: unreadConversations > 0 ? `${unreadConversations} New` : 'Live',
+            badgeColor: unreadConversations > 0 ? 'bg-red-500 text-white font-bold' : 'bg-emerald-500 text-white',
         },
         {
             name: 'AI Knowledge Base',
