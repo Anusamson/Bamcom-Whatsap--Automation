@@ -21,7 +21,8 @@ import {
     BookOpen,
     Flame,
     CalendarCheck,
-    CheckSquare
+    CheckSquare,
+    Workflow
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -96,6 +97,14 @@ export default function Sidebar({
             icon: Columns3,
             badge: 'Kanban',
             badgeColor: 'bg-indigo-500 text-white',
+        },
+        {
+            name: 'Follow-up Sequences',
+            href: route('sequences.index'),
+            active: route().current('sequences.*'),
+            icon: Workflow,
+            badge: 'Sequences',
+            badgeColor: 'bg-purple-600 text-white',
         },
         {
             name: 'Deals & Opportunities',

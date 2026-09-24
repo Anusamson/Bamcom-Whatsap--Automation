@@ -14,6 +14,7 @@ use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SequenceController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\UserController;
@@ -96,6 +97,14 @@ Route::middleware('auth')->group(function () {
     Route::match(['post', 'patch'], '/deals/{deal}/reopen', [DealController::class, 'reopen'])->name('deals.reopen');
     Route::resource('deals', DealController::class);
     Route::get('/opportunities', fn () => redirect()->route('deals.index'))->name('opportunities.index');
+
+    // Follow-Up Sequences Subsystem
+    Route::post('/sequences/{sequence}/toggle', [SequenceController::class, 'toggleStatus'])->name('sequences.toggle');
+    Route::post('/sequences/{sequence}/enroll', [SequenceController::class, 'enrollContact'])->name('sequences.enroll');
+    Route::post('/sequences/enrollments/{enrollment}/unenroll', [SequenceController::class, 'unenrollContact'])->name('sequences.enrollments.unenroll');
+    Route::post('/contacts/{contact}/opt-out', [SequenceController::class, 'optOutContact'])->name('contacts.opt-out');
+    Route::post('/contacts/{contact}/opt-in', [SequenceController::class, 'optInContact'])->name('contacts.opt-in');
+    Route::resource('sequences', SequenceController::class);
 
     // WhatsApp Business Platform Settings
     Route::get('/settings/whatsapp', [WhatsAppSettingsController::class, 'index'])->name('whatsapp.settings.index');

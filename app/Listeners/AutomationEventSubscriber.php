@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use App\Enums\SequenceEnrollmentStatus;
 use App\Events\DealLost;
 use App\Events\DealWon;
 use App\Events\InspectionCancelled;
@@ -9,6 +10,7 @@ use App\Events\InspectionCompleted;
 use App\Events\InspectionScheduled;
 use App\Events\LeadScoreChanged;
 use App\Events\PipelineStageChanged;
+use App\Models\SequenceEnrollment;
 use App\Services\Automation\AutomationEngine;
 use Illuminate\Events\Dispatcher;
 
@@ -91,6 +93,21 @@ class AutomationEventSubscriber
                 'deal_title' => $event->deal->title,
                 'value' => (float) $event->deal->value,
             ]);
+        }
+
+        // Auto-cancel active sequences for this contact if exit_on_deal_won is enabled
+        $contact = $event->deal->contact ?? $event->deal->lead?->contact;
+        if ($contact) {
+            SequenceEnrollment::where('contact_id', $contact->id)
+                ->where('status', SequenceEnrollmentStatus::Active->value)
+                ->whereHas('sequence', fn ($q) => $q->where('exit_on_deal_won', true))
+                ->update([
+                    'status' => SequenceEnrollmentStatus::Cancelled->value,
+                    'cancelled_at' => now(),
+                    'cancellation_reason' => "Deal #{$event->deal->id} ('{$event->deal->title}') was won",
+                    'next_step_id' => null,
+                    'next_step_due_at' => null,
+                ]);
         }
     }
 

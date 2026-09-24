@@ -444,4 +444,12 @@ class Lead extends Model
             return strcasecmp($t->name, $name) === 0 || $t->slug === $slug;
         });
     }
+
+    /**
+     * Sequence enrollments for this lead.
+     */
+    public function sequenceEnrollments(): HasMany
+    {
+        return $this->hasMany(SequenceEnrollment::class, 'lead_id');
+    }
 }

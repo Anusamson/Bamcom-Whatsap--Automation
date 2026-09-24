@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ContactStatus;
 use App\Enums\ConversationStatus;
 use App\Enums\LeadSource;
+use App\Enums\SequenceEnrollmentStatus;
 use App\Services\Contact\PhoneNormalizerService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -64,6 +65,9 @@ class Contact extends Model
         'lead_source',
         'assigned_user_id',
         'status',
+        'has_opted_out',
+        'opted_out_at',
+        'opt_out_reason',
         'last_contact_at',
     ];
 
@@ -89,6 +93,8 @@ class Contact extends Model
         return [
             'status' => ContactStatus::class,
             'lead_source' => LeadSource::class,
+            'has_opted_out' => 'boolean',
+            'opted_out_at' => 'datetime',
             'last_contact_at' => 'datetime',
         ];
     }
@@ -391,5 +397,57 @@ class Contact extends Model
         return $this->tags->contains(function (Tag $t) use ($name, $slug): bool {
             return strcasecmp($t->name, $name) === 0 || $t->slug === $slug;
         });
+    }
+
+    /**
+     * Sequence enrollments for this contact.
+     */
+    public function sequenceEnrollments(): HasMany
+    {
+        return $this->hasMany(SequenceEnrollment::class, 'contact_id');
+    }
+
+    /**
+     * Active sequence enrollments.
+     */
+    public function activeSequenceEnrollments(): HasMany
+    {
+        return $this->hasMany(SequenceEnrollment::class, 'contact_id')
+            ->where('status', SequenceEnrollmentStatus::Active->value);
+    }
+
+    /**
+     * Mark contact as opted-out and automatically cancel any active sequences.
+     */
+    public function optOut(?string $reason = 'Customer requested opt-out'): self
+    {
+        $this->update([
+            'has_opted_out' => true,
+            'opted_out_at' => now(),
+            'opt_out_reason' => $reason,
+        ]);
+
+        // Cancel all active sequence enrollments
+        $this->activeSequenceEnrollments()->update([
+            'status' => SequenceEnrollmentStatus::Cancelled->value,
+            'cancelled_at' => now(),
+            'cancellation_reason' => 'Customer opted out of automated communications',
+        ]);
+
+        return $this;
+    }
+
+    /**
+     * Opt contact back in.
+     */
+    public function optIn(): self
+    {
+        $this->update([
+            'has_opted_out' => false,
+            'opted_out_at' => null,
+            'opt_out_reason' => null,
+        ]);
+
+        return $this;
     }
 }
