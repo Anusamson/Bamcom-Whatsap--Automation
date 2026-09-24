@@ -24,7 +24,8 @@ import {
     CheckSquare,
     Workflow,
     Megaphone,
-    ListFilter
+    ListFilter,
+    BarChart3
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -43,6 +44,14 @@ export default function Sidebar({
             icon: LayoutDashboard,
             badge: 'Live',
             badgeColor: 'bg-emerald-500 text-white',
+        },
+        {
+            name: 'Analytics & Reports',
+            href: route('reports.index'),
+            active: route().current('reports.*'),
+            icon: BarChart3,
+            badge: 'Insights',
+            badgeColor: 'bg-indigo-600 text-white',
         },
         {
             name: 'CRM Contacts',
