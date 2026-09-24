@@ -17,6 +17,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SequenceController;
+use App\Http\Controllers\SmartListController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\UserController;
@@ -107,6 +108,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/contacts/{contact}/opt-out', [SequenceController::class, 'optOutContact'])->name('contacts.opt-out');
     Route::post('/contacts/{contact}/opt-in', [SequenceController::class, 'optInContact'])->name('contacts.opt-in');
     Route::resource('sequences', SequenceController::class);
+
+    // Dynamic Smart Lists Subsystem
+    Route::post('/smart-lists/preview', [SmartListController::class, 'preview'])->name('smart-lists.preview');
+    Route::post('/smart-lists/{smartList}/toggle-favorite', [SmartListController::class, 'toggleFavorite'])->name('smart-lists.toggle-favorite');
+    Route::resource('smart-lists', SmartListController::class);
 
     // WhatsApp Marketing Campaigns & Audiences Subsystem
     Route::post('/audiences/preview', [AudienceController::class, 'preview'])->name('audiences.preview');

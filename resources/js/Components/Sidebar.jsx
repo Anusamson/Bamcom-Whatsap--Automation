@@ -23,7 +23,8 @@ import {
     CalendarCheck,
     CheckSquare,
     Workflow,
-    Megaphone
+    Megaphone,
+    ListFilter
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -74,6 +75,14 @@ export default function Sidebar({
             icon: TrendingUp,
             badge: 'Leads',
             badgeColor: 'bg-amber-500 text-white',
+        },
+        {
+            name: 'Smart Lists',
+            href: route('smart-lists.index'),
+            active: route().current('smart-lists.*'),
+            icon: ListFilter,
+            badge: 'Dynamic',
+            badgeColor: 'bg-indigo-600 text-white',
         },
         {
             name: 'Tasks & Reminders',
