@@ -299,4 +299,15 @@ class ConversationInboxTest extends TestCase
         $response = $this->actingAs($this->unauthorizedUser)->get('/inbox');
         $response->assertStatus(403);
     }
+
+    public function test_admin_role_can_view_inbox(): void
+    {
+        $admin = User::factory()->create([
+            'role' => UserRole::Admin,
+        ]);
+        $admin->assignRole(UserRole::Admin->value);
+
+        $response = $this->actingAs($admin)->get('/inbox');
+        $response->assertStatus(200);
+    }
 }

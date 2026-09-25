@@ -21,6 +21,8 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Contracts\Permission;
+use Spatie\Permission\Exceptions\PermissionDoesNotExist;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password', 'role', 'status', 'team_id'])]
@@ -28,7 +30,11 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
+
+    use HasRoles {
+        hasPermissionTo as spatieHasPermissionTo;
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -101,6 +107,21 @@ class User extends Authenticatable
     public function isSuperAdmin(): bool
     {
         return $this->hasRole(UserRole::SuperAdmin->value) || $this->role === UserRole::SuperAdmin;
+    }
+
+    /**
+     * Determine if the user may perform the given permission.
+     * Safely returns false if the permission does not exist in the database.
+     *
+     * @param  Permission|\BackedEnum|int|string  $permission
+     */
+    public function hasPermissionTo($permission, ?string $guardName = null): bool
+    {
+        try {
+            return $this->spatieHasPermissionTo($permission, $guardName);
+        } catch (PermissionDoesNotExist) {
+            return false;
+        }
     }
 
     /**

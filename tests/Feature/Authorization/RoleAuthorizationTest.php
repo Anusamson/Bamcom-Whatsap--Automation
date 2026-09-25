@@ -4,9 +4,11 @@ namespace Tests\Feature\Authorization;
 
 use App\Enums\PermissionEnum;
 use App\Enums\UserRole;
+use App\Models\Conversation;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -195,5 +197,28 @@ class RoleAuthorizationTest extends TestCase
 
         $response->assertRedirect();
         $this->assertTrue($targetUser->fresh()->hasRole(UserRole::SalesManager->value));
+    }
+
+    public function test_all_permission_enum_cases_exist_in_database(): void
+    {
+        $databasePermissions = Permission::pluck('name')->all();
+
+        foreach (PermissionEnum::cases() as $permissionEnum) {
+            $this->assertContains($permissionEnum->value, $databasePermissions);
+        }
+    }
+
+    public function test_user_has_permission_to_returns_false_safely_for_nonexistent_permission(): void
+    {
+        $user = User::factory()->create();
+
+        $this->assertFalse($user->hasPermissionTo('nonexistent.permission.does.not.exist'));
+    }
+
+    public function test_admin_user_can_view_any_conversations_without_permission_does_not_exist_exception(): void
+    {
+        $admin = User::where('email', 'admin@bamcom.ai')->first();
+
+        $this->assertTrue($admin->can('viewAny', Conversation::class));
     }
 }
