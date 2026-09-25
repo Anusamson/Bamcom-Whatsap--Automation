@@ -48,12 +48,9 @@ export default function Login({ status, canResetPassword }) {
                                 <ShieldCheck className="w-3.5 h-3.5" />
                                 <span>Portal Access</span>
                             </span>
-                            <Link
-                                href="/"
-                                className="text-xs font-medium text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition"
-                            >
-                                Back to Home &rarr;
-                            </Link>
+                            <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
+                                Bamcom Nigeria Limited
+                            </span>
                         </div>
                         <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                             Sign in
@@ -210,16 +207,11 @@ export default function Login({ status, canResetPassword }) {
                             )}
                         </button>
 
-                        {/* Switch Link: "Already a member? Sign in" / "Don't have an account? Sign up" */}
-                        <div className="pt-3 text-center">
-                            <p className="text-xs text-slate-600 dark:text-slate-400">
-                                Don't have an account?{' '}
-                                <Link
-                                    href={route('register')}
-                                    className="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:underline"
-                                >
-                                    Sign up
-                                </Link>
+                        {/* Super Admin Managed Access Note */}
+                        <div className="pt-3 text-center border-t border-slate-100 dark:border-slate-800">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                Access is restricted to authorized personnel.<br />
+                                Accounts are provisioned exclusively by the <span className="font-semibold text-slate-700 dark:text-slate-300">Super Administrator</span>.
                             </p>
                         </div>
                     </form>
