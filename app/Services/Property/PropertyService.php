@@ -8,7 +8,10 @@ use App\Models\PropertyMedia;
 use App\Models\PropertyPrice;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class PropertyService
 {
@@ -93,7 +96,17 @@ class PropertyService
 
             $this->syncPrice($property, $data);
 
-            if (! empty($data['cover_image_url'])) {
+            if (isset($data['cover_image']) && $data['cover_image'] instanceof UploadedFile) {
+                $path = $data['cover_image']->store('properties/covers', 'public');
+                $property->media()->create([
+                    'media_type' => 'image',
+                    'file_path' => $path,
+                    'file_url' => asset('storage/'.$path),
+                    'caption' => $property->title,
+                    'is_primary' => true,
+                    'order_column' => 0,
+                ]);
+            } elseif (! empty($data['cover_image_url'])) {
                 $property->media()->create([
                     'media_type' => 'image',
                     'file_path' => $data['cover_image_url'],
@@ -104,7 +117,7 @@ class PropertyService
                 ]);
             }
 
-            return $property->load(['estate', 'activePrice', 'media', 'promotion']);
+            return $property->load(['estate', 'activePrice', 'media', 'primaryMedia', 'promotion']);
         });
     }
 
@@ -138,7 +151,36 @@ class PropertyService
                 $this->syncPrice($property, $data);
             }
 
-            if (! empty($data['cover_image_url'])) {
+            if (! empty($data['remove_cover_image'])) {
+                $primary = $property->primaryMedia;
+                if ($primary) {
+                    if ($primary->file_path && ! Str::startsWith($primary->file_path, ['http://', 'https://'])) {
+                        Storage::disk('public')->delete($primary->file_path);
+                    }
+                    $primary->delete();
+                }
+            } elseif (isset($data['cover_image']) && $data['cover_image'] instanceof UploadedFile) {
+                $path = $data['cover_image']->store('properties/covers', 'public');
+                $primary = $property->primaryMedia;
+                if ($primary) {
+                    if ($primary->file_path && ! Str::startsWith($primary->file_path, ['http://', 'https://'])) {
+                        Storage::disk('public')->delete($primary->file_path);
+                    }
+                    $primary->update([
+                        'file_path' => $path,
+                        'file_url' => asset('storage/'.$path),
+                    ]);
+                } else {
+                    $property->media()->create([
+                        'media_type' => 'image',
+                        'file_path' => $path,
+                        'file_url' => asset('storage/'.$path),
+                        'caption' => $property->title,
+                        'is_primary' => true,
+                        'order_column' => 0,
+                    ]);
+                }
+            } elseif (! empty($data['cover_image_url'])) {
                 $primary = $property->primaryMedia;
                 if ($primary) {
                     $primary->update([
@@ -157,7 +199,7 @@ class PropertyService
                 }
             }
 
-            return $property->fresh(['estate', 'activePrice', 'media', 'promotion']);
+            return $property->fresh(['estate', 'activePrice', 'media', 'primaryMedia', 'promotion']);
         });
     }
 

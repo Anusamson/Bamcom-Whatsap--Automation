@@ -154,6 +154,7 @@ class PropertyController extends Controller
             'activePrice',
             'prices' => fn ($q) => $q->latest(),
             'media',
+            'primaryMedia',
             'promotion',
             'leads.contact',
             'leads.assignedUser',
@@ -176,7 +177,7 @@ class PropertyController extends Controller
     {
         Gate::authorize('update', $property);
 
-        $property->load(['estate', 'activePrice', 'media', 'promotion']);
+        $property->load(['estate', 'activePrice', 'media', 'primaryMedia', 'promotion']);
 
         $estates = Estate::query()
             ->select('id', 'name', 'location', 'title_document')

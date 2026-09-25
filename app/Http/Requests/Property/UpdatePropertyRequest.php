@@ -47,7 +47,23 @@ class UpdatePropertyRequest extends FormRequest
             'total_units' => ['nullable', 'integer', 'min:1'],
             'status' => ['nullable', 'string', 'in:published,draft,archived'],
             'is_featured' => ['nullable', 'boolean'],
+            'cover_image' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:10240'],
             'cover_image_url' => ['nullable', 'string', 'max:1000'],
+            'remove_cover_image' => ['nullable', 'boolean'],
+        ];
+    }
+
+    /**
+     * Get the error messages for the defined validation rules.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'cover_image.image' => 'The cover photo must be an image file.',
+            'cover_image.mimes' => 'The cover photo must be in JPEG or PNG format.',
+            'cover_image.max' => 'The cover photo may not be greater than 10MB.',
         ];
     }
 }

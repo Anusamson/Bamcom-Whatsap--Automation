@@ -1,10 +1,17 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Building2, ArrowLeft, Save, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { Building2, ArrowLeft, Save, Trash2, Upload, CheckCircle2 } from 'lucide-react';
+import { useState, useRef } from 'react';
 
 export default function Edit({ property, estates, promotions, propertyTypes, availabilities, titleDocuments }) {
-    const { data, setData, put, processing, errors } = useForm({
+    const existingCover = property.primary_media?.file_url || property.primary_media?.file_path || '';
+    const fileInputRef = useRef(null);
+    const [imagePreview, setImagePreview] = useState(existingCover || null);
+    const [fileError, setFileError] = useState('');
+    const [isDragging, setIsDragging] = useState(false);
+
+    const { data, setData, post, processing, errors } = useForm({
+        _method: 'put',
         estate_id: property.estate_id || '',
         promotion_id: property.promotion_id || '',
         title: property.title || '',
@@ -21,12 +28,79 @@ export default function Edit({ property, estates, promotions, propertyTypes, ava
         total_units: property.total_units || 1,
         status: property.status || 'published',
         is_featured: Boolean(property.is_featured),
-        cover_image_url: property.primary_media?.file_url || property.primary_media?.file_path || '',
+        cover_image: null,
+        remove_cover_image: false,
         description: property.description || '',
         features: property.features || [],
     });
 
     const [featureInput, setFeatureInput] = useState('');
+
+    const validateAndSetFile = (file) => {
+        setFileError('');
+        if (!file) return;
+
+        const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+        if (!validTypes.includes(file.type)) {
+            setFileError('Please upload an image in JPEG or PNG format.');
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            setFileError('The cover photo may not be greater than 10MB.');
+            return;
+        }
+
+        setData((prev) => ({
+            ...prev,
+            cover_image: file,
+            remove_cover_image: false,
+        }));
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            validateAndSetFile(file);
+        }
+    };
+
+    const handleRemoveImage = () => {
+        setData((prev) => ({
+            ...prev,
+            cover_image: null,
+            remove_cover_image: true,
+        }));
+        setImagePreview(null);
+        setFileError('');
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer?.files?.[0];
+        if (file) {
+            validateAndSetFile(file);
+        }
+    };
 
     const handleAddFeature = () => {
         if (featureInput.trim()) {
@@ -41,7 +115,9 @@ export default function Edit({ property, estates, promotions, propertyTypes, ava
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        put(route('properties.update', property.id));
+        post(route('properties.update', property.id), {
+            forceFormData: true,
+        });
     };
 
     return (
@@ -278,16 +354,86 @@ export default function Edit({ property, estates, promotions, propertyTypes, ava
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                                    Cover Photo URL
+                                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                                    Cover Photo <span className="font-normal text-slate-400 dark:text-slate-500">(JPEG or PNG)</span>
                                 </label>
+
                                 <input
-                                    type="url"
-                                    value={data.cover_image_url}
-                                    onChange={(e) => setData('cover_image_url', e.target.value)}
-                                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white p-2.5 focus:ring-2 focus:ring-emerald-500"
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/jpg"
+                                    onChange={handleFileChange}
+                                    className="hidden"
                                 />
-                                {errors.cover_image_url && <p className="text-xs text-rose-500 mt-1">{errors.cover_image_url}</p>}
+
+                                {!imagePreview ? (
+                                    <div
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={handleDrop}
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className={`cursor-pointer border-2 border-dashed rounded-xl p-6 transition-all duration-200 text-center flex flex-col items-center justify-center gap-2.5 ${
+                                            isDragging
+                                                ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/20 ring-2 ring-emerald-500/20'
+                                                : 'border-slate-300 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/50 hover:bg-slate-100/70 dark:hover:bg-slate-900 hover:border-emerald-400 dark:hover:border-emerald-600'
+                                        }`}
+                                    >
+                                        <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                            <Upload className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                                Click to upload cover photo <span className="font-normal text-slate-500 dark:text-slate-400">or drag and drop</span>
+                                            </p>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                                                Picture format: <span className="font-semibold text-emerald-600 dark:text-emerald-400">JPEG, PNG</span> (up to 10MB)
+                                            </p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="relative rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-900 group shadow-sm">
+                                        <img
+                                            src={imagePreview}
+                                            alt="Cover preview"
+                                            className="w-full h-56 object-cover"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex items-end justify-between p-4">
+                                            <div className="text-white space-y-1">
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500 text-white shadow-sm">
+                                                    <CheckCircle2 className="w-3.5 h-3.5" /> {data.cover_image ? 'New Cover Photo Selected' : 'Current Cover Photo'}
+                                                </span>
+                                                {data.cover_image && (
+                                                    <p className="text-xs text-slate-200 font-medium truncate max-w-sm">
+                                                        {data.cover_image.name} ({((data.cover_image.size || 0) / (1024 * 1024)).toFixed(2)} MB)
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/95 hover:bg-white text-slate-900 transition-colors shadow-md"
+                                                >
+                                                    Change Picture
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleRemoveImage}
+                                                    className="p-1.5 text-xs font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors shadow-md"
+                                                    title="Remove picture"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {(fileError || errors.cover_image) && (
+                                    <p className="text-xs text-rose-500 mt-1.5 font-medium">
+                                        {fileError || errors.cover_image}
+                                    </p>
+                                )}
                             </div>
 
                             <div>

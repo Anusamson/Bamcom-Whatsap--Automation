@@ -73,6 +73,7 @@ class Property extends Model
         'promo_price',
         'initial_deposit',
         'payment_plan_summary',
+        'primary_media',
     ];
 
     protected function casts(): array
@@ -155,6 +156,16 @@ class Property extends Model
     public function primaryMedia(): HasOne
     {
         return $this->hasOne(PropertyMedia::class)->where('is_primary', true);
+    }
+
+    /**
+     * Primary hero media image accessor.
+     */
+    public function getPrimaryMediaAttribute(): ?PropertyMedia
+    {
+        return $this->relationLoaded('primaryMedia')
+            ? $this->getRelation('primaryMedia')
+            : $this->primaryMedia()->first();
     }
 
     /**
