@@ -103,6 +103,10 @@ class EmailTemplateService
         ?Inspection $inspection = null,
         array $extra = []
     ): array {
+        if (! $agent && $contact?->assignedUser) {
+            $agent = $contact->assignedUser;
+        }
+
         $unsubscribeUrl = url('/email/unsubscribe'.($contact ? '?email='.urlencode($contact->email) : ''));
 
         $vars = [
@@ -248,7 +252,7 @@ class EmailTemplateService
      */
     public function buildVariablesForContact(?Contact $contact, array $extra = []): array
     {
-        return $this->buildVariables(contact: $contact, extra: $extra);
+        return $this->buildVariables(contact: $contact, agent: $contact?->assignedUser, extra: $extra);
     }
 
     /**

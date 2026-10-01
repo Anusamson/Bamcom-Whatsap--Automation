@@ -13,6 +13,9 @@ enum AutomationTriggerType: string
     case DealLost = 'deal_lost';
     case ContactCreated = 'contact_created';
     case LeadCreated = 'lead_created';
+    case LeadQualified = 'lead_qualified';
+    case PropertyInterestAdded = 'property_interest_added';
+    case CustomerUnresponsive = 'customer_unresponsive';
     case WhatsAppMessageReceived = 'whatsapp_message_received';
     case Manual = 'manual';
 
@@ -31,6 +34,9 @@ enum AutomationTriggerType: string
             self::DealLost => 'Deal Marked Lost',
             self::ContactCreated => 'Contact Registered',
             self::LeadCreated => 'Lead Created',
+            self::LeadQualified => 'Lead Qualified',
+            self::PropertyInterestAdded => 'Property Interest Added',
+            self::CustomerUnresponsive => 'Customer Unresponsive',
             self::WhatsAppMessageReceived => 'WhatsApp Message Received',
             self::Manual => 'Manual / API Trigger',
         };
@@ -48,6 +54,9 @@ enum AutomationTriggerType: string
             self::DealWon, self::DealLost => 'Handshake',
             self::ContactCreated => 'UserPlus',
             self::LeadCreated => 'Target',
+            self::LeadQualified => 'CheckCircle',
+            self::PropertyInterestAdded => 'Home',
+            self::CustomerUnresponsive => 'ClockAlert',
             self::WhatsAppMessageReceived => 'MessageSquare',
             self::Manual => 'PlayCircle',
         };

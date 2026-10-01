@@ -21,6 +21,7 @@ import {
     AlertCircle,
     UserX,
     UserCheck,
+    Mail,
     Eye
 } from 'lucide-react';
 import { useState } from 'react';
@@ -205,28 +206,32 @@ export default function Show({
                 <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 dark:from-purple-950/20 dark:via-indigo-950/20 dark:to-blue-950/20 border border-purple-100 dark:border-purple-900/30">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-purple-900 dark:text-purple-300 flex items-center gap-1.5 mb-2">
                         <ShieldCheck className="w-4 h-4 text-purple-600" />
-                        Enforced Pre-Execution Guardrails (5 Checks)
+                        Enforced Pre-Execution Guardrails (Automated Sequence Safety)
                     </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs text-gray-700 dark:text-gray-300">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 text-xs text-gray-700 dark:text-gray-300">
                         <div className="flex items-start gap-1.5 bg-white/70 dark:bg-gray-800/70 p-2.5 rounded-xl border border-purple-100/50">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                            <span>1. Lead remains active (not lost or archived)</span>
+                            <span>1. Contact eligible & active</span>
                         </div>
                         <div className="flex items-start gap-1.5 bg-white/70 dark:bg-gray-800/70 p-2.5 rounded-xl border border-purple-100/50">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                            <span>2. Customer has not opted out</span>
+                            <span>2. Not unsubscribed / opted-out</span>
                         </div>
                         <div className="flex items-start gap-1.5 bg-white/70 dark:bg-gray-800/70 p-2.5 rounded-xl border border-purple-100/50">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                            <span>3. Deal is not already won</span>
+                            <span>3. Email not suppressed</span>
                         </div>
                         <div className="flex items-start gap-1.5 bg-white/70 dark:bg-gray-800/70 p-2.5 rounded-xl border border-purple-100/50">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                            <span>4. Sequence is not cancelled</span>
+                            <span>4. Deal not already won</span>
                         </div>
                         <div className="flex items-start gap-1.5 bg-white/70 dark:bg-gray-800/70 p-2.5 rounded-xl border border-purple-100/50">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                            <span>5. Message remains applicable</span>
+                            <span>5. Lead in compatible state</span>
+                        </div>
+                        <div className="flex items-start gap-1.5 bg-white/70 dark:bg-gray-800/70 p-2.5 rounded-xl border border-purple-100/50">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                            <span>6. Sequence active</span>
                         </div>
                     </div>
                 </div>
@@ -275,12 +280,37 @@ export default function Show({
                                             </h3>
                                             <span className="text-xs font-medium text-gray-500 flex items-center gap-1">
                                                 <Clock className="w-3.5 h-3.5 text-purple-500" />
-                                                Delay: {step.delay_minutes} minutes
+                                                Delay: {step.delay_value ? `${step.delay_value} ${step.delay_unit || 'minutes'}` : `${step.delay_minutes} minutes`}
                                             </span>
                                         </div>
 
                                         {/* Actions Grid */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                                            {/* Email Message / Template */}
+                                            {(step.email_template_id || step.email_config) && (
+                                                <div className="p-3 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 space-y-1">
+                                                    <span className="font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1 uppercase tracking-wider text-[10px]">
+                                                        <Mail className="w-3.5 h-3.5" />
+                                                        Email Outbound
+                                                    </span>
+                                                    {step.email_template_id && (
+                                                        <p className="text-gray-900 dark:text-white font-medium">
+                                                            Template ID: #{step.email_template_id}
+                                                        </p>
+                                                    )}
+                                                    {step.email_config?.subject && (
+                                                        <p className="text-gray-700 dark:text-gray-300 italic">
+                                                            Subject: "{step.email_config.subject}"
+                                                        </p>
+                                                    )}
+                                                    {step.email_config?.body_html && !step.email_template_id && (
+                                                        <p className="text-gray-600 dark:text-gray-400 line-clamp-2">
+                                                            {step.email_config.body_html.replace(/<[^>]*>?/gm, '')}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+
                                             {/* WhatsApp Message */}
                                             {step.whatsapp_config?.message && (
                                                 <div className="p-3 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/30 space-y-1">

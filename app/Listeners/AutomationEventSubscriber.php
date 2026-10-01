@@ -3,13 +3,17 @@
 namespace App\Listeners;
 
 use App\Enums\SequenceEnrollmentStatus;
+use App\Events\CustomerUnresponsive;
 use App\Events\DealLost;
 use App\Events\DealWon;
 use App\Events\InspectionCancelled;
 use App\Events\InspectionCompleted;
 use App\Events\InspectionScheduled;
+use App\Events\LeadCreated;
+use App\Events\LeadQualified;
 use App\Events\LeadScoreChanged;
 use App\Events\PipelineStageChanged;
+use App\Events\PropertyInterestAdded;
 use App\Models\SequenceEnrollment;
 use App\Services\Automation\AutomationEngine;
 use Illuminate\Events\Dispatcher;
@@ -123,6 +127,50 @@ class AutomationEventSubscriber
         }
     }
 
+    public function handleLeadCreated(LeadCreated $event): void
+    {
+        $source = $event->lead->lead_source ?? $event->lead->source ?? null;
+        $sourceValue = is_object($source) && enum_exists($source::class) ? $source->value : (string) ($source ?? '');
+
+        $this->automationEngine->dispatch('lead_created', $event->lead, array_merge([
+            'lead_id' => $event->lead->id,
+            'contact_id' => $event->lead->contact_id,
+            'source' => $sourceValue,
+            'score' => $event->lead->score,
+        ], $event->context));
+    }
+
+    public function handleLeadQualified(LeadQualified $event): void
+    {
+        $this->automationEngine->dispatch('lead_qualified', $event->lead, array_merge([
+            'lead_id' => $event->lead->id,
+            'contact_id' => $event->lead->contact_id,
+            'qualification_status' => is_object($event->lead->qualification_status) && enum_exists($event->lead->qualification_status::class) ? $event->lead->qualification_status->value : (string) $event->lead->qualification_status,
+            'score' => $event->lead->score,
+        ], $event->context));
+    }
+
+    public function handlePropertyInterestAdded(PropertyInterestAdded $event): void
+    {
+        $subject = $event->lead ?? $event->contact;
+        $this->automationEngine->dispatch('property_interest_added', $subject, array_merge([
+            'contact_id' => $event->contact->id,
+            'property_id' => $event->property?->id,
+            'property_title' => $event->property?->title ?? $event->property?->name,
+            'lead_id' => $event->lead?->id,
+        ], $event->interestData));
+    }
+
+    public function handleCustomerUnresponsive(CustomerUnresponsive $event): void
+    {
+        $subject = $event->lead ?? $event->contact;
+        $this->automationEngine->dispatch('customer_unresponsive', $subject, array_merge([
+            'contact_id' => $event->contact->id,
+            'lead_id' => $event->lead?->id,
+            'days_unresponsive' => $event->daysUnresponsive,
+        ], $event->context));
+    }
+
     /**
      * Register listeners for the subscriber.
      */
@@ -136,6 +184,10 @@ class AutomationEventSubscriber
             InspectionCancelled::class => 'handleInspectionCancelled',
             DealWon::class => 'handleDealWon',
             DealLost::class => 'handleDealLost',
+            LeadCreated::class => 'handleLeadCreated',
+            LeadQualified::class => 'handleLeadQualified',
+            PropertyInterestAdded::class => 'handlePropertyInterestAdded',
+            CustomerUnresponsive::class => 'handleCustomerUnresponsive',
         ];
     }
 }

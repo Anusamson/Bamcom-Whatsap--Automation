@@ -2,6 +2,7 @@
 
 namespace App\Services\Sequence;
 
+use App\Enums\EmailMessageType;
 use App\Enums\SequenceEnrollmentStatus;
 use App\Enums\SequenceStatus;
 use App\Enums\TaskPriority;
@@ -10,6 +11,7 @@ use App\Enums\UserRole;
 use App\Jobs\ExecuteSequenceStepJob;
 use App\Models\Contact;
 use App\Models\Conversation;
+use App\Models\EmailTemplate;
 use App\Models\FollowUpSequence;
 use App\Models\Lead;
 use App\Models\PipelineStage;
@@ -20,6 +22,7 @@ use App\Models\User;
 use App\Notifications\AutomationNotification;
 use App\Services\Contact\ContactService;
 use App\Services\Conversation\ConversationService;
+use App\Services\Email\EmailService;
 use App\Services\Lead\PipelineService;
 use App\Services\Task\TaskService;
 use App\Services\WhatsApp\WhatsAppMessageService;
@@ -37,8 +40,11 @@ class SequenceService
         protected TaskService $taskService,
         protected PipelineService $pipelineService,
         protected ContactService $contactService,
-        protected ConversationService $conversationService
-    ) {}
+        protected ConversationService $conversationService,
+        protected ?EmailService $emailService = null
+    ) {
+        $this->emailService ??= app(EmailService::class);
+    }
 
     /**
      * Create a new follow-up sequence.
@@ -128,14 +134,20 @@ class SequenceService
     public function addStep(FollowUpSequence $sequence, array $stepData): SequenceStep
     {
         $stepNumber = $stepData['step_number'] ?? (($sequence->steps()->max('step_number') ?? 0) + 1);
+        $delayUnit = $stepData['delay_unit'] ?? $stepData['delay_type'] ?? 'minutes';
+        $delayValue = isset($stepData['delay_value']) ? (int) $stepData['delay_value'] : (int) ($stepData['delay_minutes'] ?? 0);
 
         return SequenceStep::create([
             'sequence_id' => $sequence->id,
+            'email_template_id' => $stepData['email_template_id'] ?? null,
             'step_number' => $stepNumber,
             'name' => $stepData['name'] ?? "Step {$stepNumber}",
             'delay_minutes' => (int) ($stepData['delay_minutes'] ?? 0),
             'delay_type' => $stepData['delay_type'] ?? 'minutes',
+            'delay_unit' => $delayUnit,
+            'delay_value' => $delayValue,
             'whatsapp_config' => $stepData['whatsapp_config'] ?? null,
+            'email_config' => $stepData['email_config'] ?? null,
             'task_config' => $stepData['task_config'] ?? null,
             'stage_change_config' => $stepData['stage_change_config'] ?? null,
             'tag_config' => $stepData['tag_config'] ?? null,
@@ -155,9 +167,13 @@ class SequenceService
         $step->update([
             'step_number' => $stepData['step_number'] ?? $step->step_number,
             'name' => $stepData['name'] ?? $step->name,
+            'email_template_id' => array_key_exists('email_template_id', $stepData) ? $stepData['email_template_id'] : $step->email_template_id,
             'delay_minutes' => isset($stepData['delay_minutes']) ? (int) $stepData['delay_minutes'] : $step->delay_minutes,
             'delay_type' => $stepData['delay_type'] ?? $step->delay_type,
+            'delay_unit' => $stepData['delay_unit'] ?? $step->delay_unit,
+            'delay_value' => isset($stepData['delay_value']) ? (int) $stepData['delay_value'] : $step->delay_value,
             'whatsapp_config' => $stepData['whatsapp_config'] ?? $step->whatsapp_config,
+            'email_config' => $stepData['email_config'] ?? $step->email_config,
             'task_config' => $stepData['task_config'] ?? $step->task_config,
             'stage_change_config' => $stepData['stage_change_config'] ?? $step->stage_change_config,
             'tag_config' => $stepData['tag_config'] ?? $step->tag_config,
@@ -355,11 +371,33 @@ class SequenceService
     }
 
     /**
+     * Calculate delay in minutes based on delay_unit (minutes, hours, days, weeks) and delay_value.
+     */
+    public function calculateDelayMinutes(SequenceStep|int $stepOrValue, ?string $unit = null): int
+    {
+        if ($stepOrValue instanceof SequenceStep) {
+            $unit = strtolower($stepOrValue->delay_unit ?? $stepOrValue->delay_type ?? 'minutes');
+            $value = $stepOrValue->delay_value !== null ? (int) $stepOrValue->delay_value : (int) $stepOrValue->delay_minutes;
+        } else {
+            $value = (int) $stepOrValue;
+            $unit = strtolower($unit ?? 'minutes');
+        }
+
+        return match ($unit) {
+            'minutes', 'minute' => max(0, $value),
+            'hours', 'hour' => max(0, $value) * 60,
+            'days', 'day' => max(0, $value) * 1440,
+            'weeks', 'week' => max(0, $value) * 10080,
+            default => max(0, $value),
+        };
+    }
+
+    /**
      * Schedule a step for execution.
      */
     public function scheduleStepExecution(SequenceEnrollment $enrollment, SequenceStep $step): void
     {
-        $delayMinutes = max(0, $step->delay_minutes);
+        $delayMinutes = $this->calculateDelayMinutes($step);
         $dueAt = now()->addMinutes($delayMinutes);
 
         $enrollment->update([
@@ -516,32 +554,90 @@ class SequenceService
             $summary['whatsapp'] = $this->executeWhatsAppAction($step->whatsapp_config ?? [], $contact, $lead);
         }
 
-        // 2. Task
+        // 2. Email Message / Template
+        if ($step->hasEmail()) {
+            $summary['email'] = $this->executeEmailAction($step, $contact, $lead);
+        }
+
+        // 3. Task
         if ($step->hasTask()) {
             $summary['task'] = $this->executeTaskAction($step->task_config ?? [], $contact, $lead);
         }
 
-        // 3. Stage Change
+        // 4. Stage Change
         if ($step->hasStageChange()) {
             $summary['stage_change'] = $this->executeStageChangeAction($step->stage_change_config ?? [], $lead);
         }
 
-        // 4. Tag
+        // 5. Tag
         if ($step->hasTagChange()) {
             $summary['tag'] = $this->executeTagAction($step->tag_config ?? [], $contact, $lead);
         }
 
-        // 5. Assignment
+        // 6. Assignment
         if ($step->hasAssignment()) {
             $summary['assignment'] = $this->executeAssignmentAction($step->assignment_config ?? [], $contact, $lead);
         }
 
-        // 6. Notification
+        // 7. Notification
         if ($step->hasNotification()) {
             $summary['notification'] = $this->executeNotificationAction($step->notification_config ?? [], $contact, $lead);
         }
 
         return $summary;
+    }
+
+    /**
+     * Execute Email action (message or template).
+     *
+     * @return array<string, mixed>
+     */
+    protected function executeEmailAction(SequenceStep $step, Contact $contact, ?Lead $lead): array
+    {
+        if (empty($contact->email)) {
+            throw new Exception("Contact #{$contact->id} does not have an email address configured.");
+        }
+
+        $config = (array) ($step->email_config ?? []);
+        $templateId = $step->email_template_id ?? $config['email_template_id'] ?? $config['template_id'] ?? null;
+        $template = $templateId ? EmailTemplate::find($templateId) : null;
+
+        $subject = $config['subject'] ?? null;
+        if ($subject) {
+            $subject = $this->interpolateTokens($subject, $contact, $lead);
+        }
+
+        $bodyHtml = $config['body_html'] ?? $config['body'] ?? null;
+        if ($bodyHtml) {
+            $bodyHtml = $this->interpolateTokens($bodyHtml, $contact, $lead);
+        }
+
+        $type = $config['type'] ?? EmailMessageType::Marketing->value;
+        $variables = (array) ($config['variables'] ?? $config['template_variables'] ?? []);
+
+        $message = $this->emailService->send([
+            'to_email' => $contact->email,
+            'to_name' => $contact->full_name,
+            'contact_id' => $contact->id,
+            'email_template_id' => $template?->id,
+            'template_variables' => $variables,
+            'subject' => $subject,
+            'body_html' => $bodyHtml,
+            'type' => $type,
+            'metadata' => [
+                'sequence_id' => $step->sequence_id,
+                'sequence_step_id' => $step->id,
+            ],
+        ]);
+
+        return [
+            'email_message_id' => $message->id,
+            'email_message_uuid' => $message->uuid,
+            'to_email' => $message->to_email,
+            'subject' => $message->subject,
+            'template_id' => $template?->id,
+            'status' => $message->status->value,
+        ];
     }
 
     /**

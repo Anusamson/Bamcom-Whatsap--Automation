@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\SequenceEnrollmentStatus;
 use App\Enums\SequenceStatus;
 use App\Models\Contact;
+use App\Models\EmailTemplate;
 use App\Models\FollowUpSequence;
 use App\Models\Lead;
 use App\Models\PipelineStage;
@@ -12,6 +13,7 @@ use App\Models\SequenceEnrollment;
 use App\Models\User;
 use App\Services\Sequence\SequenceService;
 use Exception;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -86,13 +88,14 @@ class SequenceController extends Controller
         return Inertia::render('Sequences/Create', [
             'pipelineStages' => PipelineStage::query()->orderBy('order_column')->get(['id', 'name', 'pipeline_id']),
             'users' => User::query()->where('status', 'active')->orderBy('name')->get(['id', 'name', 'email', 'role']),
+            'emailTemplates' => EmailTemplate::query()->where('status', 'active')->orderBy('name')->get(['id', 'name', 'subject', 'category']),
         ]);
     }
 
     /**
      * Store a newly created sequence.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -106,7 +109,11 @@ class SequenceController extends Controller
             'steps.*.name' => 'nullable|string|max:255',
             'steps.*.step_number' => 'nullable|integer',
             'steps.*.delay_minutes' => 'nullable|integer|min:0',
-            'steps.*.delay_type' => 'nullable|string|in:minutes,hours,days',
+            'steps.*.delay_type' => 'nullable|string|in:minutes,hours,days,weeks',
+            'steps.*.delay_unit' => 'nullable|string|in:minutes,hours,days,weeks',
+            'steps.*.delay_value' => 'nullable|integer|min:0',
+            'steps.*.email_template_id' => 'nullable|integer|exists:email_templates,id',
+            'steps.*.email_config' => 'nullable|array',
             'steps.*.whatsapp_config' => 'nullable|array',
             'steps.*.task_config' => 'nullable|array',
             'steps.*.stage_change_config' => 'nullable|array',
@@ -117,6 +124,13 @@ class SequenceController extends Controller
         ]);
 
         $sequence = $this->sequenceService->createSequence($validated, $request->user());
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'sequence' => $sequence,
+            ], 201);
+        }
 
         return redirect()->route('sequences.show', $sequence)
             ->with('success', "Follow-up sequence '{$sequence->name}' created successfully.");
@@ -163,6 +177,7 @@ class SequenceController extends Controller
             'availableContacts' => $availableContacts,
             'pipelineStages' => PipelineStage::query()->orderBy('order_column')->get(['id', 'name']),
             'users' => User::query()->where('status', 'active')->orderBy('name')->get(['id', 'name', 'email', 'role']),
+            'emailTemplates' => EmailTemplate::query()->where('status', 'active')->orderBy('name')->get(['id', 'name', 'subject', 'category']),
         ]);
     }
 
@@ -177,13 +192,14 @@ class SequenceController extends Controller
             'sequence' => $sequence,
             'pipelineStages' => PipelineStage::query()->orderBy('order_column')->get(['id', 'name', 'pipeline_id']),
             'users' => User::query()->where('status', 'active')->orderBy('name')->get(['id', 'name', 'email', 'role']),
+            'emailTemplates' => EmailTemplate::query()->where('status', 'active')->orderBy('name')->get(['id', 'name', 'subject', 'category']),
         ]);
     }
 
     /**
      * Update an existing sequence.
      */
-    public function update(Request $request, FollowUpSequence $sequence): RedirectResponse
+    public function update(Request $request, FollowUpSequence $sequence): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -198,7 +214,11 @@ class SequenceController extends Controller
             'steps.*.name' => 'nullable|string|max:255',
             'steps.*.step_number' => 'nullable|integer',
             'steps.*.delay_minutes' => 'nullable|integer|min:0',
-            'steps.*.delay_type' => 'nullable|string|in:minutes,hours,days',
+            'steps.*.delay_type' => 'nullable|string|in:minutes,hours,days,weeks',
+            'steps.*.delay_unit' => 'nullable|string|in:minutes,hours,days,weeks',
+            'steps.*.delay_value' => 'nullable|integer|min:0',
+            'steps.*.email_template_id' => 'nullable|integer|exists:email_templates,id',
+            'steps.*.email_config' => 'nullable|array',
             'steps.*.whatsapp_config' => 'nullable|array',
             'steps.*.task_config' => 'nullable|array',
             'steps.*.stage_change_config' => 'nullable|array',
@@ -208,7 +228,14 @@ class SequenceController extends Controller
             'steps.*.applicability_rules' => 'nullable|array',
         ]);
 
-        $this->sequenceService->updateSequence($sequence, $validated);
+        $updated = $this->sequenceService->updateSequence($sequence, $validated);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'sequence' => $updated,
+            ]);
+        }
 
         return redirect()->route('sequences.show', $sequence)
             ->with('success', "Follow-up sequence '{$sequence->name}' updated successfully.");
@@ -239,7 +266,7 @@ class SequenceController extends Controller
     /**
      * Enroll a contact into sequence.
      */
-    public function enrollContact(Request $request, FollowUpSequence $sequence): RedirectResponse
+    public function enrollContact(Request $request, FollowUpSequence $sequence): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'contact_id' => 'required|exists:contacts,id',
@@ -250,10 +277,25 @@ class SequenceController extends Controller
         $lead = ! empty($validated['lead_id']) ? Lead::find($validated['lead_id']) : null;
 
         try {
-            $this->sequenceService->enroll($contact, $sequence, $lead, $request->user());
+            $enrollment = $this->sequenceService->enroll($contact, $sequence, $lead, $request->user());
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'enrollment' => $enrollment,
+                    'message' => "Contact {$contact->full_name} enrolled into '{$sequence->name}' successfully.",
+                ]);
+            }
 
             return back()->with('success', "Contact {$contact->full_name} enrolled into '{$sequence->name}' successfully.");
         } catch (Exception $e) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                ], 422);
+            }
+
             return back()->withErrors(['error' => $e->getMessage()]);
         }
     }
@@ -261,10 +303,17 @@ class SequenceController extends Controller
     /**
      * Unenroll an enrollment.
      */
-    public function unenrollContact(Request $request, SequenceEnrollment $enrollment): RedirectResponse
+    public function unenrollContact(Request $request, SequenceEnrollment $enrollment): RedirectResponse|JsonResponse
     {
         $reason = $request->input('reason', 'Manual unenrollment by user');
         $this->sequenceService->unenroll($enrollment, $reason, $request->user());
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Contact unenrolled from sequence successfully.',
+            ]);
+        }
 
         return back()->with('success', 'Contact unenrolled from sequence successfully.');
     }

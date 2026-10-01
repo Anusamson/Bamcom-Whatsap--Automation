@@ -8,6 +8,8 @@ use App\Enums\LeadStatus;
 use App\Enums\LeadTemperature;
 use App\Enums\PurchaseTimeline;
 use App\Enums\QualificationStatus;
+use App\Events\LeadCreated;
+use App\Events\LeadQualified;
 use App\Models\Contact;
 use App\Models\Lead;
 use App\Services\BaseService;
@@ -120,6 +122,8 @@ class LeadService extends BaseService
                 'contact_id' => $lead->contact_id,
             ]);
 
+            LeadCreated::dispatch($lead);
+
             return $lead->fresh(['contact', 'assignedUser.profile']);
         });
     }
@@ -184,6 +188,10 @@ class LeadService extends BaseService
             }
 
             $lead->update($updates);
+
+            if ($status === LeadStatus::Qualified) {
+                LeadQualified::dispatch($lead->fresh());
+            }
 
             $this->logInfo('Lead stage updated', [
                 'lead_id' => $lead->id,

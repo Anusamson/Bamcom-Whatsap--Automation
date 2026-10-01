@@ -4,6 +4,7 @@ namespace App\Services\Sequence;
 
 use App\Enums\ContactStatus;
 use App\Enums\DealStatus;
+use App\Enums\EmailMarketingStatus;
 use App\Enums\InspectionStatus;
 use App\Enums\LeadStatus;
 use App\Enums\SequenceEnrollmentStatus;
@@ -14,23 +15,29 @@ use App\Models\Lead;
 use App\Models\SequenceEnrollment;
 use App\Models\SequenceStep;
 use App\Services\Automation\TriggerEvaluator;
+use App\Services\Email\EmailSuppressionService;
 
 /**
- * Verifier enforcing the 5 pre-execution guardrails for sequence steps:
- * 1. Lead remains active
- * 2. Customer has not opted out
- * 3. Deal isn't already won
- * 4. Sequence hasn't been cancelled
- * 5. Message remains applicable
+ * Verifier enforcing pre-execution guardrails for sequence steps:
+ * 1. Contact remains eligible
+ * 2. Contact hasn't unsubscribed
+ * 3. Contact isn't suppressed
+ * 4. Deal hasn't already been won
+ * 5. Lead hasn't entered an incompatible state
+ * 6. Sequence remains active
+ * 7. Message remains applicable
  */
 class SequenceStepVerifier
 {
     public function __construct(
-        protected TriggerEvaluator $triggerEvaluator
-    ) {}
+        protected TriggerEvaluator $triggerEvaluator,
+        protected ?EmailSuppressionService $suppressionService = null
+    ) {
+        $this->suppressionService ??= app(EmailSuppressionService::class);
+    }
 
     /**
-     * Run all 5 guardrail checks before executing a sequence step.
+     * Run all guardrail checks before executing a sequence step.
      *
      * @return array{
      *     can_execute: bool,
@@ -46,8 +53,11 @@ class SequenceStepVerifier
 
         $checks = [
             'lead_active' => $this->verifyLeadActive($lead, $contact),
+            'contact_eligible' => $this->verifyContactEligible($contact, $step),
             'not_opted_out' => $this->verifyCustomerNotOptedOut($contact),
+            'not_suppressed' => $this->verifyContactNotSuppressed($contact),
             'deal_not_won' => $this->verifyDealNotWon($contact, $lead),
+            'lead_compatible_state' => $this->verifyLeadCompatibleState($lead),
             'sequence_not_cancelled' => $this->verifySequenceNotCancelled($enrollment),
             'message_applicable' => $this->verifyMessageApplicable($step, $contact, $lead),
         ];
@@ -116,7 +126,7 @@ class SequenceStepVerifier
     }
 
     /**
-     * 2. Verify customer has not opted out.
+     * 2. Verify customer has not opted out or unsubscribed.
      *
      * @return array{passed: bool, reason?: string, terminal: bool}
      */
@@ -130,10 +140,118 @@ class SequenceStepVerifier
             ];
         }
 
+        if ($contact->email_marketing_status === EmailMarketingStatus::Unsubscribed) {
+            return [
+                'passed' => false,
+                'reason' => 'Customer has unsubscribed from email communications.',
+                'terminal' => true,
+            ];
+        }
+
         if ($contact->hasTag('opt_out') || $contact->hasTag('dnd')) {
             return [
                 'passed' => false,
                 'reason' => 'Customer possesses an opt-out or DND tag.',
+                'terminal' => true,
+            ];
+        }
+
+        return ['passed' => true, 'terminal' => false];
+    }
+
+    /**
+     * 2b. Verify customer is not suppressed on global email suppression list.
+     *
+     * @return array{passed: bool, reason?: string, terminal: bool}
+     */
+    public function verifyContactNotSuppressed(Contact $contact): array
+    {
+        if (! empty($contact->email) && $this->suppressionService->isSuppressed($contact->email)) {
+            return [
+                'passed' => false,
+                'reason' => "Customer email '{$contact->email}' is suppressed and cannot receive communications.",
+                'terminal' => true,
+            ];
+        }
+
+        if ($contact->email_marketing_status === EmailMarketingStatus::Suppressed || $contact->email_marketing_status === EmailMarketingStatus::Bounced) {
+            return [
+                'passed' => false,
+                'reason' => "Customer email marketing status is '{$contact->email_marketing_status->value}'.",
+                'terminal' => true,
+            ];
+        }
+
+        return ['passed' => true, 'terminal' => false];
+    }
+
+    /**
+     * 2c. Verify contact remains eligible (valid profile, active status, valid email if email step).
+     *
+     * @return array{passed: bool, reason?: string, terminal: bool}
+     */
+    public function verifyContactEligible(Contact $contact, ?SequenceStep $step = null): array
+    {
+        if ($contact->trashed()) {
+            return [
+                'passed' => false,
+                'reason' => 'Contact record has been deleted or archived.',
+                'terminal' => true,
+            ];
+        }
+
+        if ($contact->status === ContactStatus::Inactive || $contact->status === ContactStatus::Dormant) {
+            return [
+                'passed' => false,
+                'reason' => "Contact is {$contact->status->label()}.",
+                'terminal' => true,
+            ];
+        }
+
+        if ($step && $step->hasEmail()) {
+            if (empty($contact->email) || ! filter_var($contact->email, FILTER_VALIDATE_EMAIL)) {
+                return [
+                    'passed' => false,
+                    'reason' => 'Contact does not possess a valid email address for email sequence step.',
+                    'terminal' => true,
+                ];
+            }
+        }
+
+        return ['passed' => true, 'terminal' => false];
+    }
+
+    /**
+     * 2d. Verify lead has not entered an incompatible state (Lost, Disqualified, Won).
+     *
+     * @return array{passed: bool, reason?: string, terminal: bool}
+     */
+    public function verifyLeadCompatibleState(?Lead $lead): array
+    {
+        if (! $lead) {
+            return ['passed' => true, 'terminal' => false];
+        }
+
+        if ($lead->trashed()) {
+            return [
+                'passed' => false,
+                'reason' => 'Associated lead record has been deleted.',
+                'terminal' => true,
+            ];
+        }
+
+        if ($lead->status === LeadStatus::Lost || $lead->status === LeadStatus::Disqualified) {
+            return [
+                'passed' => false,
+                'reason' => "Lead has entered an incompatible state ({$lead->status->label()}).",
+                'terminal' => true,
+            ];
+        }
+
+        if ($lead->status === LeadStatus::Won) {
+            return [
+                'passed' => false,
+                'reason' => 'Lead has entered an incompatible state (status: Won).',
                 'terminal' => true,
             ];
         }

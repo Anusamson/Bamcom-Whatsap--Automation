@@ -10,13 +10,14 @@ import {
     CheckSquare,
     TrendingUp,
     Tag,
+    Mail,
     ChevronDown,
     ChevronUp,
     ShieldCheck
 } from 'lucide-react';
 import { useState } from 'react';
 
-export default function Edit({ sequence, pipelineStages = [], users = [] }) {
+export default function Edit({ sequence, pipelineStages = [], users = [], emailTemplates = [] }) {
     const initialSteps = sequence.steps?.length > 0
         ? sequence.steps.map((s) => ({
             id: s.id,
@@ -24,6 +25,10 @@ export default function Edit({ sequence, pipelineStages = [], users = [] }) {
             name: s.name || `Step ${s.step_number}`,
             delay_minutes: s.delay_minutes || 0,
             delay_type: s.delay_type || 'minutes',
+            delay_unit: s.delay_unit || s.delay_type || 'minutes',
+            delay_value: s.delay_value !== null && s.delay_value !== undefined ? s.delay_value : s.delay_minutes,
+            email_template_id: s.email_template_id || null,
+            email_config: s.email_config || null,
             whatsapp_config: s.whatsapp_config || null,
             task_config: s.task_config || null,
             stage_change_config: s.stage_change_config || null,
@@ -53,6 +58,10 @@ export default function Edit({ sequence, pipelineStages = [], users = [] }) {
             name: `Step ${nextNumber}`,
             delay_minutes: 1440,
             delay_type: 'days',
+            delay_unit: 'days',
+            delay_value: 1,
+            email_template_id: null,
+            email_config: null,
             whatsapp_config: {
                 message: 'Hi {{contact.first_name}}, following up regarding your property inquiry.'
             },
@@ -288,7 +297,8 @@ export default function Edit({ sequence, pipelineStages = [], users = [] }) {
                                 {/* Step Body */}
                                 {expandedStep === idx && (
                                     <div className="p-5 border-t border-gray-100 dark:border-gray-700/60 space-y-5">
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {/* Step Details & Delay */}
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                             <div className="md:col-span-2">
                                                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                                                     Step Name
@@ -303,17 +313,157 @@ export default function Edit({ sequence, pipelineStages = [], users = [] }) {
 
                                             <div>
                                                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                                                    Delay Before Step (minutes)
+                                                    Delay Duration
                                                 </label>
                                                 <input
                                                     type="number"
                                                     min="0"
-                                                    value={step.delay_minutes}
-                                                    onChange={(e) => updateStepField(idx, 'delay_minutes', parseInt(e.target.value) || 0)}
+                                                    value={step.delay_value !== undefined && step.delay_value !== null ? step.delay_value : step.delay_minutes}
+                                                    onChange={(e) => {
+                                                        const val = parseInt(e.target.value) || 0;
+                                                        const unit = step.delay_unit || 'minutes';
+                                                        const mult = { minutes: 1, hours: 60, days: 1440, weeks: 10080 }[unit] || 1;
+                                                        const updated = [...data.steps];
+                                                        updated[idx] = {
+                                                            ...updated[idx],
+                                                            delay_value: val,
+                                                            delay_minutes: val * mult
+                                                        };
+                                                        setData('steps', updated);
+                                                    }}
                                                     className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white"
                                                 />
-                                                <p className="text-[10px] text-gray-400 mt-1">0 = immediate, 1440 = 1 day, 2880 = 2 days</p>
                                             </div>
+
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                                    Delay Unit
+                                                </label>
+                                                <select
+                                                    value={step.delay_unit || 'minutes'}
+                                                    onChange={(e) => {
+                                                        const unit = e.target.value;
+                                                        const val = step.delay_value !== undefined && step.delay_value !== null ? step.delay_value : step.delay_minutes;
+                                                        const mult = { minutes: 1, hours: 60, days: 1440, weeks: 10080 }[unit] || 1;
+                                                        const updated = [...data.steps];
+                                                        updated[idx] = {
+                                                            ...updated[idx],
+                                                            delay_unit: unit,
+                                                            delay_type: unit,
+                                                            delay_minutes: val * mult
+                                                        };
+                                                        setData('steps', updated);
+                                                    }}
+                                                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white"
+                                                >
+                                                    <option value="minutes">Minutes</option>
+                                                    <option value="hours">Hours</option>
+                                                    <option value="days">Days</option>
+                                                    <option value="weeks">Weeks</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* Email Action */}
+                                        <div className="p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/30 dark:bg-indigo-950/10 space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+                                                    <Mail className="w-4 h-4" />
+                                                    Action: Outbound Email
+                                                </div>
+                                                {step.email_config || step.email_template_id ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const updated = [...data.steps];
+                                                            updated[idx] = {
+                                                                ...updated[idx],
+                                                                email_template_id: null,
+                                                                email_config: null
+                                                            };
+                                                            setData('steps', updated);
+                                                        }}
+                                                        className="text-xs text-rose-500 hover:underline"
+                                                    >
+                                                        Remove Email Action
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const updated = [...data.steps];
+                                                            updated[idx] = {
+                                                                ...updated[idx],
+                                                                email_config: { subject: '', body_html: '', type: 'marketing' }
+                                                            };
+                                                            setData('steps', updated);
+                                                        }}
+                                                        className="text-xs text-indigo-600 font-semibold hover:underline"
+                                                    >
+                                                        + Enable Email Action
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {(step.email_config || step.email_template_id) && (
+                                                <div className="space-y-3 pt-2 border-t border-indigo-100/60 dark:border-indigo-900/30">
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                            Email Template
+                                                        </label>
+                                                        <select
+                                                            value={step.email_template_id || ''}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value ? parseInt(e.target.value) : null;
+                                                                const updated = [...data.steps];
+                                                                const conf = updated[idx].email_config || {};
+                                                                updated[idx] = {
+                                                                    ...updated[idx],
+                                                                    email_template_id: val,
+                                                                    email_config: { ...conf, email_template_id: val, template_id: val }
+                                                                };
+                                                                setData('steps', updated);
+                                                            }}
+                                                            className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                                                        >
+                                                            <option value="">Custom Email Content (No Template)</option>
+                                                            {emailTemplates.map((t) => (
+                                                                <option key={t.id} value={t.id}>
+                                                                    [{t.category}] {t.name} - {t.subject}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                            Subject Line {step.email_template_id ? '(Optional override; defaults to template subject)' : ''}
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={step.email_config?.subject || ''}
+                                                            onChange={(e) => updateNestedStepField(idx, 'email_config', 'subject', e.target.value)}
+                                                            placeholder="e.g. Exclusive Property Update for {{contact.first_name}}"
+                                                            className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                                                        />
+                                                    </div>
+
+                                                    {!step.email_template_id && (
+                                                        <div>
+                                                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                Email Content (HTML / Plain Text)
+                                                            </label>
+                                                            <textarea
+                                                                rows="3"
+                                                                value={step.email_config?.body_html || step.email_config?.body || ''}
+                                                                onChange={(e) => updateNestedStepField(idx, 'email_config', 'body_html', e.target.value)}
+                                                                placeholder="<p>Dear {{contact.first_name}},</p><p>We are delighted to share our latest properties in your preferred area.</p>"
+                                                                className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* 1. WhatsApp Message Action */}

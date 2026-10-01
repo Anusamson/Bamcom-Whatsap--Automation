@@ -3,6 +3,7 @@
 namespace App\Services\Automation;
 
 use App\Enums\AutomationActionType;
+use App\Enums\EmailMessageType;
 use App\Enums\HandoverTrigger;
 use App\Enums\TaskPriority;
 use App\Enums\TaskType;
@@ -12,6 +13,8 @@ use App\Models\AutomationRun;
 use App\Models\Contact;
 use App\Models\Conversation;
 use App\Models\Deal;
+use App\Models\EmailTemplate;
+use App\Models\FollowUpSequence;
 use App\Models\Lead;
 use App\Models\PipelineStage;
 use App\Models\User;
@@ -19,8 +22,10 @@ use App\Notifications\AutomationNotification;
 use App\Services\AI\HandoverService;
 use App\Services\Contact\ContactService;
 use App\Services\Conversation\ConversationService;
+use App\Services\Email\EmailService;
 use App\Services\Lead\LeadScoringService;
 use App\Services\Lead\PipelineService;
+use App\Services\Sequence\SequenceService;
 use App\Services\Task\TaskService;
 use App\Services\WhatsApp\WhatsAppMessageService;
 use Exception;
@@ -29,7 +34,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Execution engine for all 9 automated CRM actions.
+ * Execution engine for all 13 automated CRM actions.
  */
 class ActionExecutor
 {
@@ -40,8 +45,13 @@ class ActionExecutor
         protected PipelineService $pipelineService,
         protected LeadScoringService $leadScoringService,
         protected HandoverService $handoverService,
-        protected ConversationService $conversationService
-    ) {}
+        protected ConversationService $conversationService,
+        protected ?EmailService $emailService = null,
+        protected ?SequenceService $sequenceService = null
+    ) {
+        $this->emailService ??= app(EmailService::class);
+        $this->sequenceService ??= app(SequenceService::class);
+    }
 
     /**
      * Execute an automation action on a given run.
@@ -69,6 +79,10 @@ class ActionExecutor
                 AutomationActionType::UpdateLeadScore => $this->executeUpdateLeadScore($config, $subject, $context),
                 AutomationActionType::SendNotification => $this->executeSendNotification($config, $subject, $run),
                 AutomationActionType::RequestHuman => $this->executeRequestHuman($config, $subject, $context),
+                AutomationActionType::SendEmail => $this->executeSendEmail($config, $subject, $context),
+                AutomationActionType::SendEmailTemplate => $this->executeSendEmailTemplate($config, $subject, $context),
+                AutomationActionType::StartEmailSequence => $this->executeStartEmailSequence($config, $subject, $context),
+                AutomationActionType::StopEmailSequence => $this->executeStopEmailSequence($config, $subject, $context),
             };
 
             return [
@@ -458,6 +472,184 @@ class ActionExecutor
         return [
             'conversation_id' => $conversation->id,
             'handover_result' => $result,
+        ];
+    }
+
+    /**
+     * 10. SEND_EMAIL
+     *
+     * @param  array<string, mixed>  $config
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
+     */
+    protected function executeSendEmail(array $config, ?Model $subject, array $context): array
+    {
+        $contact = $this->resolveContact($subject);
+        $toEmail = $config['to_email'] ?? $config['email'] ?? $contact?->email;
+
+        if (empty($toEmail)) {
+            throw new Exception('No destination email address found for SEND_EMAIL action.');
+        }
+
+        $rawSubject = (string) ($config['subject'] ?? 'Automated Notification from Bamcom AI CRM');
+        $subjectLine = $this->interpolateTokens($rawSubject, $subject, $context);
+
+        $rawBody = (string) ($config['body_html'] ?? $config['body'] ?? $config['message'] ?? '<p>Automated message</p>');
+        $bodyHtml = $this->interpolateTokens($rawBody, $subject, $context);
+
+        $bodyPlain = isset($config['body_plain'])
+            ? $this->interpolateTokens((string) $config['body_plain'], $subject, $context)
+            : null;
+
+        $type = $config['type'] ?? EmailMessageType::Transactional->value;
+
+        $message = $this->emailService->send([
+            'to_email' => $toEmail,
+            'to_name' => $config['to_name'] ?? $contact?->full_name,
+            'contact_id' => $contact?->id,
+            'subject' => $subjectLine,
+            'body_html' => $bodyHtml,
+            'body_plain' => $bodyPlain,
+            'type' => $type,
+            'email_account_id' => $config['email_account_id'] ?? null,
+            'metadata' => [
+                'action' => 'SEND_EMAIL',
+                'workflow_context' => $context,
+            ],
+        ]);
+
+        return [
+            'email_message_id' => $message->id,
+            'email_message_uuid' => $message->uuid,
+            'to_email' => $message->to_email,
+            'subject' => $message->subject,
+            'status' => $message->status->value,
+        ];
+    }
+
+    /**
+     * 11. SEND_EMAIL_TEMPLATE
+     *
+     * @param  array<string, mixed>  $config
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
+     */
+    protected function executeSendEmailTemplate(array $config, ?Model $subject, array $context): array
+    {
+        $contact = $this->resolveContact($subject);
+        $toEmail = $config['to_email'] ?? $config['email'] ?? $contact?->email;
+
+        if (empty($toEmail)) {
+            throw new Exception('No destination email address found for SEND_EMAIL_TEMPLATE action.');
+        }
+
+        $templateId = $config['email_template_id'] ?? $config['template_id'] ?? null;
+        $template = $templateId ? EmailTemplate::find($templateId) : null;
+
+        if (! $template && ! empty($config['template_name'])) {
+            $template = EmailTemplate::where('name', $config['template_name'])->first();
+        }
+
+        if (! $template) {
+            throw new Exception('Email template not found for SEND_EMAIL_TEMPLATE action.');
+        }
+
+        $subjectLine = ! empty($config['subject'])
+            ? $this->interpolateTokens((string) $config['subject'], $subject, $context)
+            : null;
+
+        $variables = (array) ($config['template_variables'] ?? $config['variables'] ?? []);
+        $type = $config['type'] ?? EmailMessageType::Marketing->value;
+
+        $message = $this->emailService->send([
+            'to_email' => $toEmail,
+            'to_name' => $config['to_name'] ?? $contact?->full_name,
+            'contact_id' => $contact?->id,
+            'email_template_id' => $template->id,
+            'template_variables' => $variables,
+            'subject' => $subjectLine,
+            'type' => $type,
+            'email_account_id' => $config['email_account_id'] ?? null,
+            'metadata' => [
+                'action' => 'SEND_EMAIL_TEMPLATE',
+                'template_id' => $template->id,
+                'workflow_context' => $context,
+            ],
+        ]);
+
+        return [
+            'email_message_id' => $message->id,
+            'email_message_uuid' => $message->uuid,
+            'template_id' => $template->id,
+            'template_name' => $template->name,
+            'to_email' => $message->to_email,
+            'subject' => $message->subject,
+            'status' => $message->status->value,
+        ];
+    }
+
+    /**
+     * 12. START_EMAIL_SEQUENCE
+     *
+     * @param  array<string, mixed>  $config
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
+     */
+    protected function executeStartEmailSequence(array $config, ?Model $subject, array $context): array
+    {
+        $contact = $this->resolveContact($subject);
+        if (! $contact) {
+            throw new Exception('No contact found to enroll into sequence.');
+        }
+
+        $sequenceId = $config['sequence_id'] ?? $config['follow_up_sequence_id'] ?? null;
+        $sequence = $sequenceId ? FollowUpSequence::find($sequenceId) : null;
+
+        if (! $sequence && ! empty($config['sequence_name'])) {
+            $sequence = FollowUpSequence::where('name', $config['sequence_name'])->first();
+        }
+
+        if (! $sequence) {
+            throw new Exception('Follow-up sequence not found for START_EMAIL_SEQUENCE action.');
+        }
+
+        $lead = $this->resolveLead($subject);
+        $enrollment = $this->sequenceService->enroll($contact, $sequence, $lead);
+
+        return [
+            'sequence_id' => $sequence->id,
+            'sequence_name' => $sequence->name,
+            'enrollment_id' => $enrollment->id,
+            'enrollment_status' => $enrollment->status->value,
+            'contact_id' => $contact->id,
+        ];
+    }
+
+    /**
+     * 13. STOP_EMAIL_SEQUENCE
+     *
+     * @param  array<string, mixed>  $config
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
+     */
+    protected function executeStopEmailSequence(array $config, ?Model $subject, array $context): array
+    {
+        $contact = $this->resolveContact($subject);
+        if (! $contact) {
+            throw new Exception('No contact found to stop sequence for.');
+        }
+
+        $sequenceId = $config['sequence_id'] ?? $config['follow_up_sequence_id'] ?? null;
+        $sequence = $sequenceId ? FollowUpSequence::find($sequenceId) : null;
+        $reason = (string) ($config['reason'] ?? 'Stopped by automated workflow');
+
+        $cancelledCount = $this->sequenceService->unenrollContact($contact, $sequence, $reason);
+
+        return [
+            'contact_id' => $contact->id,
+            'sequence_id' => $sequence?->id,
+            'cancelled_count' => $cancelledCount,
+            'reason' => $reason,
         ];
     }
 

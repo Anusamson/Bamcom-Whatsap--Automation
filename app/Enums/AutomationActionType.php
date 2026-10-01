@@ -13,6 +13,10 @@ enum AutomationActionType: string
     case UpdateLeadScore = 'UPDATE_LEAD_SCORE';
     case SendNotification = 'SEND_NOTIFICATION';
     case RequestHuman = 'REQUEST_HUMAN';
+    case SendEmail = 'SEND_EMAIL';
+    case SendEmailTemplate = 'SEND_EMAIL_TEMPLATE';
+    case StartEmailSequence = 'START_EMAIL_SEQUENCE';
+    case StopEmailSequence = 'STOP_EMAIL_SEQUENCE';
 
     /**
      * Human-readable label for the action.
@@ -29,6 +33,10 @@ enum AutomationActionType: string
             self::UpdateLeadScore => 'Update Lead Score',
             self::SendNotification => 'Send In-App Notification',
             self::RequestHuman => 'Trigger AI-to-Human Handover',
+            self::SendEmail => 'Send Direct Email',
+            self::SendEmailTemplate => 'Send Email Template',
+            self::StartEmailSequence => 'Start Email Sequence',
+            self::StopEmailSequence => 'Stop Email Sequence',
         };
     }
 
@@ -47,6 +55,9 @@ enum AutomationActionType: string
             self::UpdateLeadScore => 'Flame',
             self::SendNotification => 'Bell',
             self::RequestHuman => 'Users',
+            self::SendEmail, self::SendEmailTemplate => 'Mail',
+            self::StartEmailSequence => 'Play',
+            self::StopEmailSequence => 'Square',
         };
     }
 

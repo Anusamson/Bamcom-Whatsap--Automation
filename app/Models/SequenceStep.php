@@ -33,11 +33,15 @@ class SequenceStep extends Model
     protected $fillable = [
         'uuid',
         'sequence_id',
+        'email_template_id',
         'step_number',
         'name',
         'delay_minutes',
         'delay_type',
+        'delay_unit',
+        'delay_value',
         'whatsapp_config',
+        'email_config',
         'task_config',
         'stage_change_config',
         'tag_config',
@@ -51,7 +55,9 @@ class SequenceStep extends Model
         return [
             'step_number' => 'integer',
             'delay_minutes' => 'integer',
+            'delay_value' => 'integer',
             'whatsapp_config' => 'array',
+            'email_config' => 'array',
             'task_config' => 'array',
             'stage_change_config' => 'array',
             'tag_config' => 'array',
@@ -75,6 +81,11 @@ class SequenceStep extends Model
         return $this->belongsTo(FollowUpSequence::class, 'sequence_id');
     }
 
+    public function emailTemplate(): BelongsTo
+    {
+        return $this->belongsTo(EmailTemplate::class, 'email_template_id');
+    }
+
     public function logs(): HasMany
     {
         return $this->hasMany(SequenceStepLog::class, 'sequence_step_id');
@@ -83,6 +94,19 @@ class SequenceStep extends Model
     public function hasWhatsApp(): bool
     {
         return ! empty($this->whatsapp_config) && (! empty($this->whatsapp_config['message']) || ! empty($this->whatsapp_config['template_name']));
+    }
+
+    public function hasEmail(): bool
+    {
+        return ! empty($this->email_template_id) || (
+            ! empty($this->email_config) && (
+                ! empty($this->email_config['template_id']) ||
+                ! empty($this->email_config['email_template_id']) ||
+                ! empty($this->email_config['subject']) ||
+                ! empty($this->email_config['body_html']) ||
+                ! empty($this->email_config['body'])
+            )
+        );
     }
 
     public function hasTask(): bool
