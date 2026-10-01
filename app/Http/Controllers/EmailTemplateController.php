@@ -2,10 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\EmailMessageType;
+use App\Enums\EmailTemplateCategory;
+use App\Enums\EmailTemplateStatus;
 use App\Http\Requests\Email\StoreEmailTemplateRequest;
 use App\Http\Requests\Email\UpdateEmailTemplateRequest;
 use App\Models\Contact;
 use App\Models\EmailTemplate;
+use App\Models\Inspection;
+use App\Models\Property;
+use App\Models\User;
+use App\Services\Email\EmailService;
 use App\Services\Email\EmailTemplateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -18,7 +25,8 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 class EmailTemplateController extends Controller
 {
     public function __construct(
-        protected EmailTemplateService $templateService
+        protected EmailTemplateService $templateService,
+        protected EmailService $emailService
     ) {}
 
     /**
@@ -30,7 +38,8 @@ class EmailTemplateController extends Controller
 
         $templates = EmailTemplate::query()
             ->with('creator:id,name,email')
-            ->when($request->filled('category'), fn ($q) => $q->where('category', $request->input('category')))
+            ->when($request->filled('category'), fn ($q) => $q->category($request->input('category')))
+            ->when($request->filled('status'), fn ($q) => $q->status($request->input('status')))
             ->when($request->filled('search'), function ($q) use ($request) {
                 $search = '%'.trim((string) $request->input('search')).'%';
                 $q->where(fn ($sub) => $sub->where('name', 'like', $search)->orWhere('subject', 'like', $search));
@@ -39,13 +48,53 @@ class EmailTemplateController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        $categories = array_map(fn (EmailTemplateCategory $c) => [
+            'value' => $c->value,
+            'label' => $c->label(),
+            'badgeClass' => $c->badgeClass(),
+            'requires_unsubscribe' => $c->requiresUnsubscribe(),
+        ], EmailTemplateCategory::cases());
+
+        $statuses = array_map(fn (EmailTemplateStatus $s) => [
+            'value' => $s->value,
+            'label' => $s->label(),
+            'badgeClass' => $s->badgeClass(),
+        ], EmailTemplateStatus::cases());
+
         if ($request->wantsJson()) {
-            return response()->json($templates);
+            return response()->json([
+                'templates' => $templates,
+                'categories' => $categories,
+                'statuses' => $statuses,
+            ]);
         }
 
         return Inertia::render('Email/Templates/Index', [
             'templates' => $templates,
-            'filters' => $request->only(['category', 'search']),
+            'categories' => $categories,
+            'statuses' => $statuses,
+            'filters' => $request->only(['category', 'status', 'search']),
+        ]);
+    }
+
+    /**
+     * Show the template creation editor.
+     */
+    public function create(): Response
+    {
+        Gate::authorize('create', EmailTemplate::class);
+
+        return Inertia::render('Email/Templates/Create', [
+            'categories' => array_map(fn (EmailTemplateCategory $c) => [
+                'value' => $c->value,
+                'label' => $c->label(),
+                'requires_unsubscribe' => $c->requiresUnsubscribe(),
+            ], EmailTemplateCategory::cases()),
+            'statuses' => array_map(fn (EmailTemplateStatus $s) => [
+                'value' => $s->value,
+                'label' => $s->label(),
+            ], EmailTemplateStatus::cases()),
+            'sampleVariables' => $this->templateService->generateSampleVariables(),
         ]);
     }
 
@@ -88,6 +137,29 @@ class EmailTemplateController extends Controller
 
         return Inertia::render('Email/Templates/Show', [
             'template' => $emailTemplate,
+            'sampleVariables' => $this->templateService->generateSampleVariables(),
+        ]);
+    }
+
+    /**
+     * Show the template editing interface.
+     */
+    public function edit(EmailTemplate $emailTemplate): Response
+    {
+        Gate::authorize('update', $emailTemplate);
+
+        return Inertia::render('Email/Templates/Edit', [
+            'template' => $emailTemplate,
+            'categories' => array_map(fn (EmailTemplateCategory $c) => [
+                'value' => $c->value,
+                'label' => $c->label(),
+                'requires_unsubscribe' => $c->requiresUnsubscribe(),
+            ], EmailTemplateCategory::cases()),
+            'statuses' => array_map(fn (EmailTemplateStatus $s) => [
+                'value' => $s->value,
+                'label' => $s->label(),
+            ], EmailTemplateStatus::cases()),
+            'sampleVariables' => $this->templateService->generateSampleVariables(),
         ]);
     }
 
@@ -129,35 +201,85 @@ class EmailTemplateController extends Controller
     }
 
     /**
-     * Preview rendered HTML and plain text with sample or contact merge variables.
+     * Preview rendered HTML and plain text with desktop / mobile simulation and merge variables.
      */
     public function preview(Request $request, EmailTemplate $emailTemplate): JsonResponse
     {
         Gate::authorize('view', $emailTemplate);
 
-        $contact = null;
-        if ($request->filled('contact_id')) {
-            $contact = Contact::find($request->integer('contact_id'));
-        }
+        $contact = $request->filled('contact_id') ? Contact::find($request->integer('contact_id')) : null;
+        $agent = $request->filled('agent_id') ? User::find($request->integer('agent_id')) : $request->user();
+        $property = $request->filled('property_id') ? Property::find($request->integer('property_id')) : null;
+        $inspection = $request->filled('inspection_id') ? Inspection::find($request->integer('inspection_id')) : null;
 
-        $variables = $this->templateService->buildVariablesForContact(
-            $contact,
-            $request->input('variables', [])
+        $variables = $this->templateService->buildVariables(
+            contact: $contact,
+            agent: $agent,
+            property: $property,
+            inspection: $inspection,
+            extra: $request->input('variables', $this->templateService->generateSampleVariables())
         );
 
+        $wrapBrand = $request->boolean('wrap_brand', true);
+
         $rendered = $this->templateService->render(
-            $emailTemplate->body_html,
-            $emailTemplate->body_plain,
-            $variables
+            htmlTemplate: $emailTemplate->body_html,
+            plainTemplate: $emailTemplate->body_plain,
+            variables: $variables,
+            preheader: $emailTemplate->preheader,
+            wrapWithBrand: $wrapBrand
         );
 
         $subject = $this->templateService->renderSubject($emailTemplate->subject, $variables);
 
         return response()->json([
             'subject' => $subject,
+            'preheader' => $emailTemplate->preheader,
             'html' => $rendered['html'],
             'plain' => $rendered['plain'],
             'variables_used' => $variables,
         ]);
+    }
+
+    /**
+     * Send a live test email rendered from this template.
+     */
+    public function sendTest(Request $request, EmailTemplate $emailTemplate): JsonResponse
+    {
+        Gate::authorize('view', $emailTemplate);
+
+        $validated = $request->validate([
+            'recipient_email' => ['required', 'email', 'max:255'],
+            'wrap_brand' => ['nullable', 'boolean'],
+        ]);
+
+        $sampleVariables = $this->templateService->generateSampleVariables();
+        $rendered = $this->templateService->render(
+            htmlTemplate: $emailTemplate->body_html,
+            plainTemplate: $emailTemplate->body_plain,
+            variables: $sampleVariables,
+            preheader: $emailTemplate->preheader,
+            wrapWithBrand: $request->boolean('wrap_brand', true)
+        );
+
+        $subject = '[TEST PREVIEW] '.$this->templateService->renderSubject($emailTemplate->subject, $sampleVariables);
+
+        $message = $this->emailService->send([
+            'to_email' => $validated['recipient_email'],
+            'subject' => $subject,
+            'body_html' => $rendered['html'],
+            'body_plain' => $rendered['plain'],
+            'type' => EmailMessageType::Test,
+            'email_template_id' => $emailTemplate->id,
+            'metadata' => [
+                'template_test' => true,
+                'template_uuid' => $emailTemplate->uuid,
+            ],
+        ], $request->user());
+
+        return response()->json([
+            'message' => "Test email dispatched successfully to {$validated['recipient_email']}.",
+            'email' => $message,
+        ], HttpResponse::HTTP_ACCEPTED);
     }
 }

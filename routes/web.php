@@ -184,6 +184,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/emails/{email}', [EmailController::class, 'show'])->name('emails.show');
     Route::resource('email-templates', EmailTemplateController::class);
     Route::post('/email-templates/{emailTemplate}/preview', [EmailTemplateController::class, 'preview'])->name('email-templates.preview');
+    Route::post('/email-templates/{emailTemplate}/test', [EmailTemplateController::class, 'sendTest'])->name('email-templates.test');
     Route::resource('email-suppressions', EmailSuppressionController::class)->only(['index', 'store', 'destroy']);
 });
 

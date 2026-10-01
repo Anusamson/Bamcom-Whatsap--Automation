@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\EmailTemplateCategory;
+use App\Enums\EmailTemplateStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,9 +20,11 @@ use Illuminate\Support\Str;
  * @property string $uuid
  * @property string $name
  * @property string $subject
+ * @property ?string $preheader
  * @property string $body_html
  * @property ?string $body_plain
- * @property string $category
+ * @property EmailTemplateCategory $category
+ * @property EmailTemplateStatus $status
  * @property ?list<string> $variables
  * @property bool $is_active
  * @property ?int $created_by
@@ -38,9 +42,11 @@ class EmailTemplate extends Model
         'uuid',
         'name',
         'subject',
+        'preheader',
         'body_html',
         'body_plain',
         'category',
+        'status',
         'variables',
         'is_active',
         'created_by',
@@ -49,6 +55,8 @@ class EmailTemplate extends Model
     protected function casts(): array
     {
         return [
+            'category' => EmailTemplateCategory::class,
+            'status' => EmailTemplateStatus::class,
             'variables' => 'array',
             'is_active' => 'boolean',
         ];
@@ -60,6 +68,19 @@ class EmailTemplate extends Model
             if (empty($template->uuid)) {
                 $template->uuid = (string) Str::uuid();
             }
+
+            // Sync is_active with status
+            if ($template->status === EmailTemplateStatus::Active) {
+                $template->is_active = true;
+            } elseif ($template->status === EmailTemplateStatus::Draft || $template->status === EmailTemplateStatus::Archived) {
+                $template->is_active = false;
+            }
+        });
+
+        static::updating(function (EmailTemplate $template): void {
+            if ($template->isDirty('status')) {
+                $template->is_active = ($template->status === EmailTemplateStatus::Active);
+            }
         });
     }
 
@@ -68,7 +89,43 @@ class EmailTemplate extends Model
      */
     public function scopeActive(Builder $query): Builder
     {
-        return $query->where('is_active', true);
+        return $query->where('status', EmailTemplateStatus::Active);
+    }
+
+    /**
+     * Scope by category.
+     */
+    public function scopeCategory(Builder $query, EmailTemplateCategory|string $category): Builder
+    {
+        $val = $category instanceof EmailTemplateCategory ? $category->value : $category;
+
+        return $query->where('category', $val);
+    }
+
+    /**
+     * Scope by status.
+     */
+    public function scopeStatus(Builder $query, EmailTemplateStatus|string $status): Builder
+    {
+        $val = $status instanceof EmailTemplateStatus ? $status->value : $status;
+
+        return $query->where('status', $val);
+    }
+
+    /**
+     * Check if this template requires an unsubscribe link.
+     */
+    public function requiresUnsubscribe(): bool
+    {
+        return $this->category->requiresUnsubscribe();
+    }
+
+    /**
+     * Check if HTML content contains an unsubscribe link merge tag or URL.
+     */
+    public function hasUnsubscribeLink(): bool
+    {
+        return (bool) preg_match('/\{\{\s*unsubscribe_url\s*\}\}|\{\s*unsubscribe_url\s*\}|unsubscribe/i', $this->body_html);
     }
 
     /**

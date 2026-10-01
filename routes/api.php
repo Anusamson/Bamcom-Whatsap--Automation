@@ -108,6 +108,8 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/emails/stats', [EmailApiController::class, 'stats'])->name('api.v1.emails.stats');
         Route::post('/emails/test', [EmailApiController::class, 'sendTest'])->name('api.v1.emails.test');
         Route::apiResource('emails', EmailApiController::class)->only(['index', 'show', 'store'])->names('api.v1.emails');
+        Route::post('/email-templates/{email_template}/preview', [EmailTemplateApiController::class, 'preview'])->name('api.v1.email-templates.preview');
+        Route::post('/email-templates/{email_template}/test', [EmailTemplateApiController::class, 'sendTest'])->name('api.v1.email-templates.test');
         Route::apiResource('email-templates', EmailTemplateApiController::class)->names('api.v1.email-templates');
         Route::apiResource('email-suppressions', EmailSuppressionApiController::class)->only(['index', 'store', 'destroy'])->names('api.v1.email-suppressions');
     });
