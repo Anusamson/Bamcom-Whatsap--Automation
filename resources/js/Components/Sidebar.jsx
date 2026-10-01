@@ -27,7 +27,8 @@ import {
     Megaphone,
     ListFilter,
     BarChart3,
-    Bell
+    Bell,
+    Mail
 } from 'lucide-react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 
@@ -164,6 +165,14 @@ export default function Sidebar({
             icon: Megaphone,
             badge: 'Broadcast',
             badgeColor: 'bg-emerald-600 text-white',
+        },
+        {
+            name: 'Email & Amazon SES',
+            href: route('emails.index'),
+            active: route().current('emails.*') || route().current('email-templates.*') || route().current('email-suppressions.*'),
+            icon: Mail,
+            badge: 'SES v2',
+            badgeColor: 'bg-sky-600 text-white',
         },
         {
             name: 'Deals & Opportunities',

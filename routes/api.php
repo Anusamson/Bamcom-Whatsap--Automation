@@ -4,6 +4,10 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\DealController;
+use App\Http\Controllers\Api\V1\EmailApiController;
+use App\Http\Controllers\Api\V1\EmailSuppressionApiController;
+use App\Http\Controllers\Api\V1\EmailTemplateApiController;
+use App\Http\Controllers\Api\V1\EmailWebhookController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\LeadController;
 use App\Http\Controllers\Api\V1\LeadScoringRuleController;
@@ -25,6 +29,9 @@ Route::prefix('v1')->group(function (): void {
     // Health & System Info
     Route::get('/health', [HealthController::class, 'index'])->name('api.v1.health');
     Route::get('/version', [HealthController::class, 'version'])->name('api.v1.version');
+
+    // Amazon SES & SNS Webhooks
+    Route::post('/emails/webhook', [EmailWebhookController::class, 'handle'])->name('api.v1.emails.webhook');
 
     // Meta WhatsApp Cloud API Webhooks
     Route::get('/whatsapp/webhook', [WhatsAppWebhookController::class, 'verify'])->name('api.v1.whatsapp.webhook.verify');
@@ -96,5 +103,12 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/lead-scoring/reset-defaults', [LeadScoringRuleController::class, 'resetDefaults'])->name('api.v1.lead-scoring.reset-defaults');
         Route::post('/leads/{lead}/score-event', [LeadScoringRuleController::class, 'recordEvent'])->name('api.v1.leads.score-event');
         Route::get('/leads/{lead}/score-history', [LeadScoringRuleController::class, 'history'])->name('api.v1.leads.score-history');
+
+        // Email Infrastructure & Amazon SES Endpoints
+        Route::get('/emails/stats', [EmailApiController::class, 'stats'])->name('api.v1.emails.stats');
+        Route::post('/emails/test', [EmailApiController::class, 'sendTest'])->name('api.v1.emails.test');
+        Route::apiResource('emails', EmailApiController::class)->only(['index', 'show', 'store'])->names('api.v1.emails');
+        Route::apiResource('email-templates', EmailTemplateApiController::class)->names('api.v1.email-templates');
+        Route::apiResource('email-suppressions', EmailSuppressionApiController::class)->only(['index', 'store', 'destroy'])->names('api.v1.email-suppressions');
     });
 });

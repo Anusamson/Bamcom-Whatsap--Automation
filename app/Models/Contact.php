@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\CampaignRecipientStatus;
 use App\Enums\ContactStatus;
 use App\Enums\ConversationStatus;
+use App\Enums\EmailMarketingStatus;
 use App\Enums\LeadSource;
 use App\Enums\SequenceEnrollmentStatus;
 use App\Services\Contact\PhoneNormalizerService;
@@ -69,6 +70,13 @@ class Contact extends Model
         'has_opted_out',
         'opted_out_at',
         'opt_out_reason',
+        'email_marketing_status',
+        'email_consent_obtained_at',
+        'email_consent_source',
+        'email_consent_ip',
+        'email_unsubscribed_at',
+        'email_bounced_at',
+        'email_bounce_count',
         'last_contact_at',
     ];
 
@@ -96,6 +104,11 @@ class Contact extends Model
             'lead_source' => LeadSource::class,
             'has_opted_out' => 'boolean',
             'opted_out_at' => 'datetime',
+            'email_marketing_status' => EmailMarketingStatus::class,
+            'email_consent_obtained_at' => 'datetime',
+            'email_unsubscribed_at' => 'datetime',
+            'email_bounced_at' => 'datetime',
+            'email_bounce_count' => 'integer',
             'last_contact_at' => 'datetime',
         ];
     }
@@ -469,5 +482,37 @@ class Contact extends Model
         ]);
 
         return $this;
+    }
+
+    /**
+     * Outbound email messages dispatched to this contact.
+     */
+    public function emailMessages(): HasMany
+    {
+        return $this->hasMany(EmailMessage::class);
+    }
+
+    /**
+     * Email suppressions associated with this contact.
+     */
+    public function emailSuppressions(): HasMany
+    {
+        return $this->hasMany(EmailSuppression::class);
+    }
+
+    /**
+     * Check if contact is actively subscribed to email communications.
+     */
+    public function isSubscribedToEmail(): bool
+    {
+        return $this->email_marketing_status === EmailMarketingStatus::Subscribed;
+    }
+
+    /**
+     * Check if contact is eligible to receive marketing emails.
+     */
+    public function canReceiveMarketingEmail(): bool
+    {
+        return ! empty($this->email) && $this->email_marketing_status === EmailMarketingStatus::Subscribed;
     }
 }

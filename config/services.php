@@ -25,7 +25,10 @@ return [
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
-        'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+        'region' => env('AWS_SES_REGION', env('AWS_DEFAULT_REGION', 'us-east-1')),
+        'from_address' => env('AWS_SES_FROM_ADDRESS', env('MAIL_FROM_ADDRESS', 'noreply@bamcomcrm.com')),
+        'from_name' => env('AWS_SES_FROM_NAME', env('MAIL_FROM_NAME', 'Bamcom AI CRM')),
+        'mock' => (bool) env('SES_SANDBOX_MOCK', false),
     ],
 
     'slack' => [

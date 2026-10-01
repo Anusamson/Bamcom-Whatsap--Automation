@@ -371,4 +371,20 @@ class User extends Authenticatable
     {
         return $query->where('status', UserStatus::Active);
     }
+
+    /**
+     * Outbound email messages dispatched by this user.
+     */
+    public function sentEmails(): HasMany
+    {
+        return $this->hasMany(EmailMessage::class);
+    }
+
+    /**
+     * Email templates authored by this user.
+     */
+    public function emailTemplates(): HasMany
+    {
+        return $this->hasMany(EmailTemplate::class, 'created_by');
+    }
 }

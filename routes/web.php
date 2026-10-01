@@ -7,6 +7,9 @@ use App\Http\Controllers\ContactImportController;
 use App\Http\Controllers\ConversationInboxController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DealController;
+use App\Http\Controllers\EmailController;
+use App\Http\Controllers\EmailSuppressionController;
+use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\EstateController;
 use App\Http\Controllers\InspectionController;
 use App\Http\Controllers\KnowledgeRecordController;
@@ -29,6 +32,10 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserRoleAssignmentController;
 use App\Http\Controllers\WhatsAppSettingsController;
 use Illuminate\Support\Facades\Route;
+
+// Public Email Compliance & Unsubscribe Portal
+Route::get('/email/unsubscribe', [EmailController::class, 'unsubscribe'])->name('emails.unsubscribe');
+Route::post('/email/unsubscribe', [EmailController::class, 'processUnsubscribe'])->name('emails.unsubscribe.process');
 
 Route::get('/', function () {
     return auth()->check()
@@ -168,6 +175,16 @@ Route::middleware('auth')->group(function () {
     Route::patch('/settings/lead-scoring/{leadScoringRule}/toggle', [LeadScoringRuleController::class, 'toggleActive'])->name('lead-scoring.toggle');
     Route::post('/settings/lead-scoring/reset-defaults', [LeadScoringRuleController::class, 'resetDefaults'])->name('lead-scoring.reset-defaults');
     Route::resource('/settings/lead-scoring', LeadScoringRuleController::class)->parameters(['lead-scoring' => 'leadScoringRule'])->names('lead-scoring');
+
+    // Email Infrastructure & Amazon SES
+    Route::get('/emails', [EmailController::class, 'index'])->name('emails.index');
+    Route::post('/emails', [EmailController::class, 'store'])->name('emails.store');
+    Route::post('/emails/test', [EmailController::class, 'sendTest'])->name('emails.test');
+    Route::get('/emails/stats', [EmailController::class, 'stats'])->name('emails.stats');
+    Route::get('/emails/{email}', [EmailController::class, 'show'])->name('emails.show');
+    Route::resource('email-templates', EmailTemplateController::class);
+    Route::post('/email-templates/{emailTemplate}/preview', [EmailTemplateController::class, 'preview'])->name('email-templates.preview');
+    Route::resource('email-suppressions', EmailSuppressionController::class)->only(['index', 'store', 'destroy']);
 });
 
 require __DIR__.'/auth.php';

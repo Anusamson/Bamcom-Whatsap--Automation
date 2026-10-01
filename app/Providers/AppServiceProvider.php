@@ -9,6 +9,8 @@ use App\Models\Lead;
 use App\Models\User;
 use App\Observers\DealObserver;
 use App\Observers\LeadObserver;
+use App\Services\Email\Contracts\EmailProviderInterface;
+use App\Services\Email\SESService;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
@@ -21,7 +23,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(
+            EmailProviderInterface::class,
+            SESService::class
+        );
     }
 
     /**

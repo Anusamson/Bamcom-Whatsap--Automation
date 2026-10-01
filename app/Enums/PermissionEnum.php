@@ -102,6 +102,15 @@ enum PermissionEnum: string
     case SettingsEdit = 'settings.edit';
     case SystemHealth = 'system.health';
 
+    // Email Infrastructure & Amazon SES
+    case EmailsView = 'emails.view';
+    case EmailsSend = 'emails.send';
+    case EmailsManage = 'emails.manage';
+    case EmailTemplatesView = 'email_templates.view';
+    case EmailTemplatesManage = 'email_templates.manage';
+    case EmailSuppressionsView = 'email_suppressions.view';
+    case EmailSuppressionsManage = 'email_suppressions.manage';
+
     /**
      * Retrieve the functional domain category for the permission.
      */
@@ -151,6 +160,10 @@ enum PermissionEnum: string
             self::KnowledgeEdit, self::KnowledgeDelete => 'AI Knowledge Base',
 
             self::SettingsView, self::SettingsEdit, self::SystemHealth => 'System Settings',
+
+            self::EmailsView, self::EmailsSend, self::EmailsManage,
+            self::EmailTemplatesView, self::EmailTemplatesManage,
+            self::EmailSuppressionsView, self::EmailSuppressionsManage => 'Email Infrastructure',
         };
     }
 
@@ -239,6 +252,14 @@ enum PermissionEnum: string
             self::SettingsView => 'View System Settings',
             self::SettingsEdit => 'Modify System Settings',
             self::SystemHealth => 'Probe Infrastructure Health',
+
+            self::EmailsView => 'View Outbound Emails & History',
+            self::EmailsSend => 'Send Outbound & Test Emails',
+            self::EmailsManage => 'Manage Email Accounts & Settings',
+            self::EmailTemplatesView => 'View Email Templates',
+            self::EmailTemplatesManage => 'Manage Email Templates',
+            self::EmailSuppressionsView => 'View Email Suppressions',
+            self::EmailSuppressionsManage => 'Manage Email Suppressions',
         };
     }
 

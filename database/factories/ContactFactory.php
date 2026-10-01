@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\ContactStatus;
+use App\Enums\EmailMarketingStatus;
 use App\Enums\LeadSource;
 use App\Models\Contact;
 use App\Models\User;
@@ -40,8 +41,48 @@ class ContactFactory extends Factory
             'lead_source' => fake()->randomElement(LeadSource::cases()),
             'assigned_user_id' => null,
             'status' => fake()->randomElement(ContactStatus::cases()),
+            'email_marketing_status' => EmailMarketingStatus::Subscribed,
+            'email_consent_obtained_at' => now(),
+            'email_consent_source' => 'web_form',
+            'email_bounce_count' => 0,
             'last_contact_at' => fake()->optional(0.7)->dateTimeBetween('-14 days', 'now'),
         ];
+    }
+
+    /**
+     * Contact state for email subscribed.
+     */
+    public function emailSubscribed(): static
+    {
+        return $this->state(fn () => [
+            'email_marketing_status' => EmailMarketingStatus::Subscribed,
+            'email_consent_obtained_at' => now(),
+        ]);
+    }
+
+    /**
+     * Contact state for email unsubscribed.
+     */
+    public function emailUnsubscribed(): static
+    {
+        return $this->state(fn () => [
+            'email_marketing_status' => EmailMarketingStatus::Unsubscribed,
+            'email_unsubscribed_at' => now(),
+            'has_opted_out' => true,
+            'opted_out_at' => now(),
+        ]);
+    }
+
+    /**
+     * Contact state for email bounced.
+     */
+    public function emailBounced(): static
+    {
+        return $this->state(fn () => [
+            'email_marketing_status' => EmailMarketingStatus::Bounced,
+            'email_bounced_at' => now(),
+            'email_bounce_count' => 3,
+        ]);
     }
 
     /**

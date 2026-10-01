@@ -117,6 +117,13 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionEnum::KnowledgeDelete->value,
             PermissionEnum::SettingsView->value,
             PermissionEnum::SystemHealth->value,
+            PermissionEnum::EmailsView->value,
+            PermissionEnum::EmailsSend->value,
+            PermissionEnum::EmailsManage->value,
+            PermissionEnum::EmailTemplatesView->value,
+            PermissionEnum::EmailTemplatesManage->value,
+            PermissionEnum::EmailSuppressionsView->value,
+            PermissionEnum::EmailSuppressionsManage->value,
         ]);
 
         // 5. Sales Manager
@@ -151,6 +158,9 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionEnum::CustomersEdit->value,
             PermissionEnum::ReportsView->value,
             PermissionEnum::ReportsExport->value,
+            PermissionEnum::EmailsView->value,
+            PermissionEnum::EmailsSend->value,
+            PermissionEnum::EmailTemplatesView->value,
         ]);
 
         // 6. Sales Executive
@@ -171,6 +181,9 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionEnum::MessagesSend->value,
             PermissionEnum::CustomersView->value,
             PermissionEnum::CustomersCreate->value,
+            PermissionEnum::EmailsView->value,
+            PermissionEnum::EmailsSend->value,
+            PermissionEnum::EmailTemplatesView->value,
         ]);
 
         // 7. Customer Support
@@ -185,6 +198,8 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionEnum::MessagesSend->value,
             PermissionEnum::CustomersView->value,
             PermissionEnum::LeadsView->value,
+            PermissionEnum::EmailsView->value,
+            PermissionEnum::EmailsSend->value,
         ]);
 
         // 8. Marketing
@@ -197,6 +212,11 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionEnum::CampaignsDelete->value,
             PermissionEnum::LeadsView->value,
             PermissionEnum::ReportsView->value,
+            PermissionEnum::EmailsView->value,
+            PermissionEnum::EmailsSend->value,
+            PermissionEnum::EmailTemplatesView->value,
+            PermissionEnum::EmailTemplatesManage->value,
+            PermissionEnum::EmailSuppressionsView->value,
         ]);
 
         // 9. Inspection Officer
