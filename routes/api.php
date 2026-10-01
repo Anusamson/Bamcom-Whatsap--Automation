@@ -115,6 +115,7 @@ Route::prefix('v1')->group(function (): void {
         Route::apiResource('email-suppressions', EmailSuppressionApiController::class)->only(['index', 'store', 'destroy'])->names('api.v1.email-suppressions');
 
         // Email Campaigns Endpoints
+        Route::get('/email-campaigns/reports/attribution', [EmailCampaignApiController::class, 'attributionReport'])->name('api.v1.email-campaigns.reports.attribution');
         Route::post('/email-campaigns/preview-audience', [EmailCampaignApiController::class, 'previewAudience'])->name('api.v1.email-campaigns.preview-audience');
         Route::post('/email-campaigns/{email_campaign}/send-test', [EmailCampaignApiController::class, 'sendTest'])->name('api.v1.email-campaigns.send-test');
         Route::post('/email-campaigns/{email_campaign}/send-now', [EmailCampaignApiController::class, 'sendNow'])->name('api.v1.email-campaigns.send-now');
@@ -123,6 +124,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/email-campaigns/{email_campaign}/resume', [EmailCampaignApiController::class, 'resume'])->name('api.v1.email-campaigns.resume');
         Route::post('/email-campaigns/{email_campaign}/cancel', [EmailCampaignApiController::class, 'cancel'])->name('api.v1.email-campaigns.cancel');
         Route::get('/email-campaigns/{email_campaign}/progress', [EmailCampaignApiController::class, 'progress'])->name('api.v1.email-campaigns.progress');
+        Route::get('/email-campaigns/{email_campaign}/attribution', [EmailCampaignApiController::class, 'attribution'])->name('api.v1.email-campaigns.attribution');
         Route::apiResource('email-campaigns', EmailCampaignApiController::class)->names('api.v1.email-campaigns');
     });
 });

@@ -9,6 +9,7 @@ use App\Http\Requests\Email\UpdateEmailCampaignRequest;
 use App\Models\EmailCampaign;
 use App\Models\EmailTemplate;
 use App\Models\SmartList;
+use App\Services\Email\EmailAttributionService;
 use App\Services\Email\EmailCampaignService;
 use App\Services\Email\EmailTemplateService;
 use Illuminate\Http\JsonResponse;
@@ -24,7 +25,8 @@ class EmailCampaignController extends Controller
 {
     public function __construct(
         protected EmailCampaignService $campaignService,
-        protected EmailTemplateService $templateService
+        protected EmailTemplateService $templateService,
+        protected EmailAttributionService $attributionService
     ) {}
 
     /**
@@ -170,23 +172,7 @@ class EmailCampaignController extends Controller
             'badgeClass' => $s->badgeClass(),
         ], EmailCampaignRecipientStatus::cases());
 
-        $summary = [
-            'total' => $emailCampaign->total_recipients,
-            'eligible' => $emailCampaign->eligible_recipients,
-            'skipped' => $emailCampaign->skipped_recipients,
-            'sent' => $emailCampaign->sent_count,
-            'delivered' => $emailCampaign->delivered_count,
-            'failed' => $emailCampaign->failed_count,
-            'opened' => $emailCampaign->opened_count,
-            'clicked' => $emailCampaign->clicked_count,
-            'bounced' => $emailCampaign->bounced_count,
-            'complained' => $emailCampaign->complained_count,
-            'unsubscribed' => $emailCampaign->unsubscribed_count,
-            'progress_percentage' => $emailCampaign->progressPercentage(),
-            'open_rate' => $emailCampaign->openRate(),
-            'click_rate' => $emailCampaign->clickRate(),
-            'bounce_rate' => $emailCampaign->bounceRate(),
-        ];
+        $summary = $emailCampaign->getAnalyticsSummary();
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -449,6 +435,48 @@ class EmailCampaignController extends Controller
             'clicked_count' => $fresh->clicked_count,
             'started_at' => $fresh->started_at?->toIso8601String(),
             'completed_at' => $fresh->completed_at?->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * View sales attribution and ROI funnel for a specific campaign.
+     */
+    public function attribution(Request $request, EmailCampaign $emailCampaign): Response|JsonResponse
+    {
+        Gate::authorize('view', $emailCampaign);
+
+        $windowDays = $request->integer('window_days', 90);
+        $attributionData = $this->attributionService->getCampaignAttribution($emailCampaign, $windowDays);
+
+        if ($request->wantsJson()) {
+            return response()->json($attributionData);
+        }
+
+        return Inertia::render('Email/Campaigns/Attribution', [
+            'campaign' => $emailCampaign,
+            'attribution' => $attributionData,
+        ]);
+    }
+
+    /**
+     * Cross-campaign executive management report on sales attribution and generated revenue.
+     */
+    public function attributionReport(Request $request): Response|JsonResponse
+    {
+        Gate::authorize('viewAny', EmailCampaign::class);
+
+        $startDate = $request->filled('start_date') ? Carbon::parse($request->input('start_date')) : null;
+        $endDate = $request->filled('end_date') ? Carbon::parse($request->input('end_date')) : null;
+
+        $report = $this->attributionService->getExecutiveAttributionReport($startDate, $endDate);
+
+        if ($request->wantsJson()) {
+            return response()->json($report);
+        }
+
+        return Inertia::render('Email/Campaigns/AttributionReport', [
+            'report' => $report,
+            'filters' => $request->only(['start_date', 'end_date']),
         ]);
     }
 }

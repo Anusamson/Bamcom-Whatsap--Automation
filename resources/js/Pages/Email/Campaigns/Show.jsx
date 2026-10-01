@@ -205,6 +205,14 @@ export default function Show({ auth, campaign, recipients, summary, recipientSta
                             </button>
                         )}
 
+                        <Link
+                            href={route('email-campaigns.attribution', campaign.id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 transition shadow-sm"
+                        >
+                            <BarChart3 className="h-3.5 w-3.5 text-emerald-600" />
+                            Sales Attribution & ROI
+                        </Link>
+
                         <button
                             type="button"
                             onClick={() => setTestModal(prev => ({ ...prev, isOpen: true }))}

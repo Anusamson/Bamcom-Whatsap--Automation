@@ -16,6 +16,7 @@ enum EmailCampaignRecipientStatus: string
     case Failed = 'failed';
     case Bounced = 'bounced';
     case Complained = 'complained';
+    case Unsubscribed = 'unsubscribed';
     case Skipped = 'skipped';
 
     /**
@@ -33,6 +34,7 @@ enum EmailCampaignRecipientStatus: string
             self::Failed => 'Failed',
             self::Bounced => 'Bounced',
             self::Complained => 'Complained',
+            self::Unsubscribed => 'Unsubscribed',
             self::Skipped => 'Skipped',
         };
     }
@@ -52,6 +54,7 @@ enum EmailCampaignRecipientStatus: string
             self::Failed => 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300 border-rose-200 dark:border-rose-800',
             self::Bounced => 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border-red-200 dark:border-red-800',
             self::Complained => 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300 border-orange-200 dark:border-orange-800',
+            self::Unsubscribed => 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 border-purple-200 dark:border-purple-800',
             self::Skipped => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700',
         };
     }

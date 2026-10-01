@@ -213,31 +213,57 @@ class EmailCampaign extends Model
     }
 
     /**
-     * Open rate percentage.
+     * Delivery rate percentage (delivered / sent).
+     */
+    public function deliveryRate(): float
+    {
+        if ($this->sent_count === 0) {
+            return 0.0;
+        }
+
+        return round(($this->delivered_count / $this->sent_count) * 100, 2);
+    }
+
+    /**
+     * Open rate percentage (opened / delivered).
      */
     public function openRate(): float
     {
-        if ($this->sent_count === 0) {
+        $base = $this->delivered_count > 0 ? $this->delivered_count : $this->sent_count;
+        if ($base === 0) {
             return 0.0;
         }
 
-        return round(($this->opened_count / $this->sent_count) * 100, 1);
+        return round(($this->opened_count / $base) * 100, 2);
     }
 
     /**
-     * Click rate percentage.
+     * Click rate percentage (clicked / delivered).
      */
     public function clickRate(): float
     {
-        if ($this->sent_count === 0) {
+        $base = $this->delivered_count > 0 ? $this->delivered_count : $this->sent_count;
+        if ($base === 0) {
             return 0.0;
         }
 
-        return round(($this->clicked_count / $this->sent_count) * 100, 1);
+        return round(($this->clicked_count / $base) * 100, 2);
     }
 
     /**
-     * Bounce rate percentage.
+     * Click-to-open rate percentage (clicked / opened).
+     */
+    public function clickToOpenRate(): float
+    {
+        if ($this->opened_count === 0) {
+            return 0.0;
+        }
+
+        return round(($this->clicked_count / $this->opened_count) * 100, 2);
+    }
+
+    /**
+     * Bounce rate percentage (bounced / sent).
      */
     public function bounceRate(): float
     {
@@ -245,7 +271,49 @@ class EmailCampaign extends Model
             return 0.0;
         }
 
-        return round(($this->bounced_count / $this->sent_count) * 100, 1);
+        return round(($this->bounced_count / $this->sent_count) * 100, 2);
+    }
+
+    /**
+     * Unsubscribe rate percentage (unsubscribed / delivered).
+     */
+    public function unsubscribeRate(): float
+    {
+        $base = $this->delivered_count > 0 ? $this->delivered_count : $this->sent_count;
+        if ($base === 0) {
+            return 0.0;
+        }
+
+        return round(($this->unsubscribed_count / $base) * 100, 2);
+    }
+
+    /**
+     * Complete analytics summary derived strictly from stored application data.
+     *
+     * @return array<string, mixed>
+     */
+    public function getAnalyticsSummary(): array
+    {
+        return [
+            'recipients' => $this->total_recipients,
+            'eligible' => $this->eligible_recipients,
+            'skipped' => $this->skipped_recipients,
+            'sent' => $this->sent_count,
+            'delivered' => $this->delivered_count,
+            'failed' => $this->failed_count,
+            'opened' => $this->opened_count,
+            'clicked' => $this->clicked_count,
+            'bounced' => $this->bounced_count,
+            'complained' => $this->complained_count,
+            'unsubscribed' => $this->unsubscribed_count,
+            'delivery_rate' => $this->deliveryRate(),
+            'open_rate' => $this->openRate(),
+            'click_rate' => $this->clickRate(),
+            'click_to_open_rate' => $this->clickToOpenRate(),
+            'bounce_rate' => $this->bounceRate(),
+            'unsubscribe_rate' => $this->unsubscribeRate(),
+            'progress_percentage' => $this->progressPercentage(),
+        ];
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Email\StoreEmailCampaignRequest;
 use App\Http\Requests\Email\UpdateEmailCampaignRequest;
 use App\Models\EmailCampaign;
+use App\Services\Email\EmailAttributionService;
 use App\Services\Email\EmailCampaignService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,8 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 class EmailCampaignApiController extends Controller
 {
     public function __construct(
-        protected EmailCampaignService $campaignService
+        protected EmailCampaignService $campaignService,
+        protected EmailAttributionService $attributionService
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -249,5 +251,27 @@ class EmailCampaignApiController extends Controller
             'started_at' => $fresh->started_at?->toIso8601String(),
             'completed_at' => $fresh->completed_at?->toIso8601String(),
         ]);
+    }
+
+    public function attribution(Request $request, EmailCampaign $emailCampaign): JsonResponse
+    {
+        Gate::authorize('view', $emailCampaign);
+
+        $windowDays = $request->integer('window_days', 90);
+        $data = $this->attributionService->getCampaignAttribution($emailCampaign, $windowDays);
+
+        return response()->json($data);
+    }
+
+    public function attributionReport(Request $request): JsonResponse
+    {
+        Gate::authorize('viewAny', EmailCampaign::class);
+
+        $startDate = $request->filled('start_date') ? Carbon::parse($request->input('start_date')) : null;
+        $endDate = $request->filled('end_date') ? Carbon::parse($request->input('end_date')) : null;
+
+        $report = $this->attributionService->getExecutiveAttributionReport($startDate, $endDate);
+
+        return response()->json($report);
     }
 }

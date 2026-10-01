@@ -311,7 +311,7 @@ class EmailInfrastructureTest extends TestCase
 
         $this->assertDatabaseHas('email_events', [
             'email_message_id' => $message->id,
-            'event_type' => 'bounce',
+            'event_type' => 'bounced',
         ]);
     }
 

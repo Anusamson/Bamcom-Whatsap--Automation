@@ -53,6 +53,9 @@ class EmailCampaignRecipient extends Model
         'opened_at',
         'clicked_at',
         'failed_at',
+        'bounced_at',
+        'complained_at',
+        'unsubscribed_at',
         'error_message',
         'metadata',
     ];
@@ -68,6 +71,9 @@ class EmailCampaignRecipient extends Model
             'opened_at' => 'datetime',
             'clicked_at' => 'datetime',
             'failed_at' => 'datetime',
+            'bounced_at' => 'datetime',
+            'complained_at' => 'datetime',
+            'unsubscribed_at' => 'datetime',
             'metadata' => 'array',
         ];
     }

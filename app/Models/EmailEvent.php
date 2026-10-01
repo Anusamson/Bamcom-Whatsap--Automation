@@ -29,11 +29,16 @@ class EmailEvent extends Model
 
     protected $fillable = [
         'email_message_id',
+        'contact_id',
+        'email_campaign_id',
         'event_type',
         'provider_event_id',
         'payload',
         'ip_address',
         'user_agent',
+        'link_url',
+        'bounce_type',
+        'bounce_subtype',
         'occurred_at',
     ];
 
@@ -48,5 +53,15 @@ class EmailEvent extends Model
     public function message(): BelongsTo
     {
         return $this->belongsTo(EmailMessage::class, 'email_message_id');
+    }
+
+    public function contact(): BelongsTo
+    {
+        return $this->belongsTo(Contact::class, 'contact_id');
+    }
+
+    public function campaign(): BelongsTo
+    {
+        return $this->belongsTo(EmailCampaign::class, 'email_campaign_id');
     }
 }

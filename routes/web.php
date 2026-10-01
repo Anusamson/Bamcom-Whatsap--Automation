@@ -189,6 +189,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('email-suppressions', EmailSuppressionController::class)->only(['index', 'store', 'destroy']);
 
     // Email Marketing Campaigns Subsystem
+    Route::get('/email-campaigns/reports/attribution', [EmailCampaignController::class, 'attributionReport'])->name('email-campaigns.reports.attribution');
     Route::post('/email-campaigns/preview-audience', [EmailCampaignController::class, 'previewAudience'])->name('email-campaigns.preview-audience');
     Route::post('/email-campaigns/{emailCampaign}/send-test', [EmailCampaignController::class, 'sendTest'])->name('email-campaigns.send-test');
     Route::post('/email-campaigns/{emailCampaign}/send-now', [EmailCampaignController::class, 'sendNow'])->name('email-campaigns.send-now');
@@ -197,6 +198,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/email-campaigns/{emailCampaign}/resume', [EmailCampaignController::class, 'resume'])->name('email-campaigns.resume');
     Route::post('/email-campaigns/{emailCampaign}/cancel', [EmailCampaignController::class, 'cancel'])->name('email-campaigns.cancel');
     Route::get('/email-campaigns/{emailCampaign}/progress', [EmailCampaignController::class, 'progress'])->name('email-campaigns.progress');
+    Route::get('/email-campaigns/{emailCampaign}/attribution', [EmailCampaignController::class, 'attribution'])->name('email-campaigns.attribution');
     Route::resource('email-campaigns', EmailCampaignController::class);
 });
 

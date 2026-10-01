@@ -155,6 +155,13 @@ export default function Index({ auth, campaigns, stats, statuses, filters }) {
                             Suppressions
                         </Link>
                         <Link
+                            href={route('email-campaigns.reports.attribution')}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 transition shadow-sm"
+                        >
+                            <BarChart3 className="h-4 w-4 text-emerald-600" />
+                            Sales Attribution Report
+                        </Link>
+                        <Link
                             href={route('email-campaigns.create')}
                             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-sky-600 hover:bg-sky-700 text-white transition shadow-sm"
                         >
