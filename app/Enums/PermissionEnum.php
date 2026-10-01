@@ -108,6 +108,8 @@ enum PermissionEnum: string
     case EmailsManage = 'emails.manage';
     case EmailTemplatesView = 'email_templates.view';
     case EmailTemplatesManage = 'email_templates.manage';
+    case EmailCampaignsView = 'email_campaigns.view';
+    case EmailCampaignsManage = 'email_campaigns.manage';
     case EmailSuppressionsView = 'email_suppressions.view';
     case EmailSuppressionsManage = 'email_suppressions.manage';
 
@@ -163,6 +165,7 @@ enum PermissionEnum: string
 
             self::EmailsView, self::EmailsSend, self::EmailsManage,
             self::EmailTemplatesView, self::EmailTemplatesManage,
+            self::EmailCampaignsView, self::EmailCampaignsManage,
             self::EmailSuppressionsView, self::EmailSuppressionsManage => 'Email Infrastructure',
         };
     }
@@ -258,6 +261,8 @@ enum PermissionEnum: string
             self::EmailsManage => 'Manage Email Accounts & Settings',
             self::EmailTemplatesView => 'View Email Templates',
             self::EmailTemplatesManage => 'Manage Email Templates',
+            self::EmailCampaignsView => 'View Email Campaigns',
+            self::EmailCampaignsManage => 'Manage & Send Email Campaigns',
             self::EmailSuppressionsView => 'View Email Suppressions',
             self::EmailSuppressionsManage => 'Manage Email Suppressions',
         };

@@ -122,6 +122,8 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionEnum::EmailsManage->value,
             PermissionEnum::EmailTemplatesView->value,
             PermissionEnum::EmailTemplatesManage->value,
+            PermissionEnum::EmailCampaignsView->value,
+            PermissionEnum::EmailCampaignsManage->value,
             PermissionEnum::EmailSuppressionsView->value,
             PermissionEnum::EmailSuppressionsManage->value,
         ]);
@@ -216,6 +218,8 @@ class RoleAndPermissionSeeder extends Seeder
             PermissionEnum::EmailsSend->value,
             PermissionEnum::EmailTemplatesView->value,
             PermissionEnum::EmailTemplatesManage->value,
+            PermissionEnum::EmailCampaignsView->value,
+            PermissionEnum::EmailCampaignsManage->value,
             PermissionEnum::EmailSuppressionsView->value,
         ]);
 

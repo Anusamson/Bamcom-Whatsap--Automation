@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\DealController;
 use App\Http\Controllers\Api\V1\EmailApiController;
+use App\Http\Controllers\Api\V1\EmailCampaignApiController;
 use App\Http\Controllers\Api\V1\EmailSuppressionApiController;
 use App\Http\Controllers\Api\V1\EmailTemplateApiController;
 use App\Http\Controllers\Api\V1\EmailWebhookController;
@@ -112,5 +113,16 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/email-templates/{email_template}/test', [EmailTemplateApiController::class, 'sendTest'])->name('api.v1.email-templates.test');
         Route::apiResource('email-templates', EmailTemplateApiController::class)->names('api.v1.email-templates');
         Route::apiResource('email-suppressions', EmailSuppressionApiController::class)->only(['index', 'store', 'destroy'])->names('api.v1.email-suppressions');
+
+        // Email Campaigns Endpoints
+        Route::post('/email-campaigns/preview-audience', [EmailCampaignApiController::class, 'previewAudience'])->name('api.v1.email-campaigns.preview-audience');
+        Route::post('/email-campaigns/{email_campaign}/send-test', [EmailCampaignApiController::class, 'sendTest'])->name('api.v1.email-campaigns.send-test');
+        Route::post('/email-campaigns/{email_campaign}/send-now', [EmailCampaignApiController::class, 'sendNow'])->name('api.v1.email-campaigns.send-now');
+        Route::post('/email-campaigns/{email_campaign}/schedule', [EmailCampaignApiController::class, 'schedule'])->name('api.v1.email-campaigns.schedule');
+        Route::post('/email-campaigns/{email_campaign}/pause', [EmailCampaignApiController::class, 'pause'])->name('api.v1.email-campaigns.pause');
+        Route::post('/email-campaigns/{email_campaign}/resume', [EmailCampaignApiController::class, 'resume'])->name('api.v1.email-campaigns.resume');
+        Route::post('/email-campaigns/{email_campaign}/cancel', [EmailCampaignApiController::class, 'cancel'])->name('api.v1.email-campaigns.cancel');
+        Route::get('/email-campaigns/{email_campaign}/progress', [EmailCampaignApiController::class, 'progress'])->name('api.v1.email-campaigns.progress');
+        Route::apiResource('email-campaigns', EmailCampaignApiController::class)->names('api.v1.email-campaigns');
     });
 });

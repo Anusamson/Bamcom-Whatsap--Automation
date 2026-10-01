@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('crm:check-reminders')->hourly();
+Schedule::command('email:send-scheduled-campaigns')->everyMinute();

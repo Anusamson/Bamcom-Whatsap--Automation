@@ -7,6 +7,7 @@ use App\Http\Controllers\ContactImportController;
 use App\Http\Controllers\ConversationInboxController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DealController;
+use App\Http\Controllers\EmailCampaignController;
 use App\Http\Controllers\EmailController;
 use App\Http\Controllers\EmailSuppressionController;
 use App\Http\Controllers\EmailTemplateController;
@@ -186,6 +187,17 @@ Route::middleware('auth')->group(function () {
     Route::post('/email-templates/{emailTemplate}/preview', [EmailTemplateController::class, 'preview'])->name('email-templates.preview');
     Route::post('/email-templates/{emailTemplate}/test', [EmailTemplateController::class, 'sendTest'])->name('email-templates.test');
     Route::resource('email-suppressions', EmailSuppressionController::class)->only(['index', 'store', 'destroy']);
+
+    // Email Marketing Campaigns Subsystem
+    Route::post('/email-campaigns/preview-audience', [EmailCampaignController::class, 'previewAudience'])->name('email-campaigns.preview-audience');
+    Route::post('/email-campaigns/{emailCampaign}/send-test', [EmailCampaignController::class, 'sendTest'])->name('email-campaigns.send-test');
+    Route::post('/email-campaigns/{emailCampaign}/send-now', [EmailCampaignController::class, 'sendNow'])->name('email-campaigns.send-now');
+    Route::post('/email-campaigns/{emailCampaign}/schedule', [EmailCampaignController::class, 'schedule'])->name('email-campaigns.schedule');
+    Route::post('/email-campaigns/{emailCampaign}/pause', [EmailCampaignController::class, 'pause'])->name('email-campaigns.pause');
+    Route::post('/email-campaigns/{emailCampaign}/resume', [EmailCampaignController::class, 'resume'])->name('email-campaigns.resume');
+    Route::post('/email-campaigns/{emailCampaign}/cancel', [EmailCampaignController::class, 'cancel'])->name('email-campaigns.cancel');
+    Route::get('/email-campaigns/{emailCampaign}/progress', [EmailCampaignController::class, 'progress'])->name('email-campaigns.progress');
+    Route::resource('email-campaigns', EmailCampaignController::class);
 });
 
 require __DIR__.'/auth.php';
