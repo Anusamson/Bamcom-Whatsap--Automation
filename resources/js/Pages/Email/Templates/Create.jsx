@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { 
@@ -8,13 +8,11 @@ import {
     Smartphone, 
     Monitor, 
     Eye, 
-    Plus, 
     AlertTriangle, 
-    CheckCircle2, 
     Sparkles, 
-    Code2,
     Wand2
 } from 'lucide-react';
+import TemplateComponentToolbar from '@/Components/Email/TemplateComponentToolbar';
 
 export default function Create({ auth, categories, statuses, sampleVariables }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -23,21 +21,94 @@ export default function Create({ auth, categories, statuses, sampleVariables }) 
         preheader: '',
         category: 'marketing',
         status: 'active',
-        body_html: `<h2>Hello {{ contact.first_name }},</h2>\n<p>We are delighted to share an exclusive update regarding your property portfolio with Bamcom Real Estate.</p>\n<p>Your dedicated advisor <strong>{{ agent.name }}</strong> is available to guide you.</p>\n<p><a href="{{ unsubscribe_url }}" style="color: #64748b; font-size: 12px;">Unsubscribe from marketing emails</a></p>`,
+        body_html: `<h2>Exclusive Property Update for {{ contact.first_name }}</h2>
+<p>We are delighted to share an exclusive update regarding prime real estate opportunities with Bamcom Real Estate &amp; Investments.</p>
+
+<!-- Email Template Image -->
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 16px 0;">
+  <tr>
+    <td align="center" style="padding: 0;">
+      <a href="https://bamcomcrm.com/properties/villa" target="_blank" style="text-decoration: none; display: inline-block;">
+        <img src="https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1200&q=80" alt="Lekki Luxury Waterfront Villa" width="600" style="display: block; max-width: 100%; width: 100%; height: auto; border: 0; outline: none; text-decoration: none; border-radius: 8px; margin: 0 auto;" />
+      </a>
+      <p style="margin: 8px 0 0 0; font-size: 12px; line-height: 16px; color: #64748b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center;">The Grandview Waterfront Villa &bull; Lekki Phase 1</p>
+    </td>
+  </tr>
+</table>
+
+<p>Your dedicated property advisor <strong>{{ agent.name }}</strong> is pleased to arrange a private on-site inspection for you.</p>
+
+<!-- Bulletproof Email CTA Button -->
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="auto" style="margin: 20px auto; border-collapse: separate;">
+  <tr>
+    <td align="center" bgcolor="#0284c7" style="border-radius: 8px;">
+      <a href="https://bamcomcrm.com/inspections/book" target="_blank" style="display: inline-block; padding: 12px 28px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 700; color: #ffffff; text-decoration: none; border-radius: 8px; background-color: #0284c7; text-align: center;">
+        Schedule Site Inspection &rarr;
+      </a>
+    </td>
+  </tr>
+</table>
+
+<!-- Social Media Channel Icons -->
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 20px 0;">
+  <tr>
+    <td align="center" style="text-align: center; padding: 0;">
+      <p style="margin: 0 0 10px 0; font-size: 12px; font-weight: 600; color: #64748b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">Connect with Bamcom Real Estate:</p>
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto; display: inline-block;">
+        <tr>
+          <td style="padding: 0 6px;">
+            <a href="https://wa.me/2348002262662" target="_blank" title="WhatsApp" style="text-decoration: none; display: inline-block;">
+              <img src="/images/email-icons/whatsapp.svg" alt="WhatsApp" width="28" height="28" style="display: block; width: 28px; height: 28px; border: 0; outline: none; border-radius: 50%;" />
+            </a>
+          </td>
+          <td style="padding: 0 6px;">
+            <a href="https://instagram.com/bamcomrealestate" target="_blank" title="Instagram" style="text-decoration: none; display: inline-block;">
+              <img src="/images/email-icons/instagram.svg" alt="Instagram" width="28" height="28" style="display: block; width: 28px; height: 28px; border: 0; outline: none; border-radius: 50%;" />
+            </a>
+          </td>
+          <td style="padding: 0 6px;">
+            <a href="https://linkedin.com/company/bamcom-real-estate" target="_blank" title="LinkedIn" style="text-decoration: none; display: inline-block;">
+              <img src="/images/email-icons/linkedin.svg" alt="LinkedIn" width="28" height="28" style="display: block; width: 28px; height: 28px; border: 0; outline: none; border-radius: 50%;" />
+            </a>
+          </td>
+          <td style="padding: 0 6px;">
+            <a href="https://bamcomcrm.com" target="_blank" title="Website" style="text-decoration: none; display: inline-block;">
+              <img src="/images/email-icons/website.svg" alt="Website" width="28" height="28" style="display: block; width: 28px; height: 28px; border: 0; outline: none; border-radius: 50%;" />
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<p><a href="{{ unsubscribe_url }}" style="color: #64748b; font-size: 12px;">Unsubscribe from marketing emails</a></p>`,
         body_plain: '',
     });
 
-    const [activeTab, setActiveTab] = useState('editor'); // 'editor' or 'preview'
     const [previewMode, setPreviewMode] = useState('desktop'); // 'desktop' or 'mobile'
     const [previewHtml, setPreviewHtml] = useState('');
-    const [previewPlain, setPreviewPlain] = useState('');
-    const [wrapBrand, setWrapBrand] = useState(true);
+    const textareaRef = useRef(null);
 
     const requiresUnsubscribe = ['marketing', 'newsletter', 'promotion', 're_engagement'].includes(data.category);
     const hasUnsubscribe = /\{\{\s*unsubscribe_url\s*\}\}|\{\s*unsubscribe_url\s*\}|unsubscribe/i.test(data.body_html);
 
     const insertVariable = (tag) => {
-        setData('body_html', data.body_html + ' ' + tag);
+        if (!textareaRef.current) {
+            setData('body_html', data.body_html + ' ' + tag);
+            return;
+        }
+        const textarea = textareaRef.current;
+        const start = textarea.selectionStart ?? data.body_html.length;
+        const end = textarea.selectionEnd ?? data.body_html.length;
+        const before = (data.body_html || '').substring(0, start);
+        const after = (data.body_html || '').substring(end);
+        setData('body_html', before + tag + after);
+        setTimeout(() => {
+            textarea.focus();
+            const newCursor = start + tag.length;
+            textarea.setSelectionRange(newCursor, newCursor);
+        }, 50);
     };
 
     const autoGeneratePlainText = () => {
@@ -49,21 +120,45 @@ export default function Create({ auth, categories, statuses, sampleVariables }) 
         setData('body_plain', text);
     };
 
-    const updateLivePreview = () => {
-        let content = data.body_html;
-        // Simple client-side replacement using sampleVariables for real-time responsiveness
-        content = content.replace(/\{\{\s*contact\.first_name\s*\}\}/g, sampleVariables.contact.first_name);
-        content = content.replace(/\{\{\s*contact\.last_name\s*\}\}/g, sampleVariables.contact.last_name);
-        content = content.replace(/\{\{\s*agent\.name\s*\}\}/g, sampleVariables.agent.name);
-        content = content.replace(/\{\{\s*property\.name\s*\}\}/g, sampleVariables.property.name);
-        content = content.replace(/\{\{\s*property\.price\s*\}\}/g, sampleVariables.property.price);
-        content = content.replace(/\{\{\s*inspection\.date\s*\}\}/g, sampleVariables.inspection.date);
-        content = content.replace(/\{\{\s*inspection\.time\s*\}\}/g, sampleVariables.inspection.time);
-        content = content.replace(/\{\{\s*unsubscribe_url\s*\}\}/g, sampleVariables.unsubscribe_url);
-        content = content.replace(/\{\{\s*company\.name\s*\}\}/g, sampleVariables.company.name);
-
+    // Real-time synchronization of Live Preview
+    useEffect(() => {
+        let content = data.body_html || '';
+        if (sampleVariables) {
+            content = content.replace(/\{\{\s*contact\.first_name\s*\}\}/g, sampleVariables.contact?.first_name || 'Babajide');
+            content = content.replace(/\{\{\s*contact\.last_name\s*\}\}/g, sampleVariables.contact?.last_name || 'Adeleke');
+            content = content.replace(/\{\{\s*agent\.name\s*\}\}/g, sampleVariables.agent?.name || 'Kemi Alabi');
+            content = content.replace(/\{\{\s*agent\.phone\s*\}\}/g, sampleVariables.agent?.phone || '+234 812 987 6543');
+            content = content.replace(/\{\{\s*agent\.email\s*\}\}/g, sampleVariables.agent?.email || 'kemi.alabi@bamcomcrm.com');
+            content = content.replace(/\{\{\s*agent\.role\s*\}\}/g, sampleVariables.agent?.role || 'Senior Investment Specialist');
+            content = content.replace(/\{\{\s*property\.name\s*\}\}/g, sampleVariables.property?.name || 'The Grandview Waterfront Villa');
+            content = content.replace(/\{\{\s*property\.price\s*\}\}/g, sampleVariables.property?.price || '₦185,000,000');
+            content = content.replace(/\{\{\s*property\.location\s*\}\}/g, sampleVariables.property?.location || 'Lekki Phase 1, Lagos');
+            content = content.replace(/\{\{\s*property\.plot_size\s*\}\}/g, sampleVariables.property?.plot_size || '850 sqm');
+            content = content.replace(/\{\{\s*inspection\.date\s*\}\}/g, sampleVariables.inspection?.date || 'Saturday, 12th October 2026');
+            content = content.replace(/\{\{\s*inspection\.time\s*\}\}/g, sampleVariables.inspection?.time || '11:00 AM (WAT)');
+            content = content.replace(/\{\{\s*unsubscribe_url\s*\}\}/g, sampleVariables.unsubscribe_url || '#');
+            content = content.replace(/\{\{\s*company\.name\s*\}\}/g, sampleVariables.company?.name || 'Bamcom Real Estate & Investments Ltd');
+            content = content.replace(/\{\{\s*company\.phone\s*\}\}/g, sampleVariables.company?.phone || '+234 800 226 2662');
+            content = content.replace(/\{\{\s*app\.url\s*\}\}/g, sampleVariables.app?.url || window.location.origin);
+        }
         setPreviewHtml(content);
-        setActiveTab('preview');
+    }, [data.body_html, sampleVariables]);
+
+    const updateLivePreview = () => {
+        // Trigger manual refresh if needed
+        let content = data.body_html;
+        if (sampleVariables) {
+            content = content.replace(/\{\{\s*contact\.first_name\s*\}\}/g, sampleVariables.contact?.first_name || 'Babajide');
+            content = content.replace(/\{\{\s*contact\.last_name\s*\}\}/g, sampleVariables.contact?.last_name || 'Adeleke');
+            content = content.replace(/\{\{\s*agent\.name\s*\}\}/g, sampleVariables.agent?.name || 'Kemi Alabi');
+            content = content.replace(/\{\{\s*property\.name\s*\}\}/g, sampleVariables.property?.name || 'The Grandview Waterfront Villa');
+            content = content.replace(/\{\{\s*property\.price\s*\}\}/g, sampleVariables.property?.price || '₦185,000,000');
+            content = content.replace(/\{\{\s*inspection\.date\s*\}\}/g, sampleVariables.inspection?.date || 'Saturday, 12th October 2026');
+            content = content.replace(/\{\{\s*inspection\.time\s*\}\}/g, sampleVariables.inspection?.time || '11:00 AM (WAT)');
+            content = content.replace(/\{\{\s*unsubscribe_url\s*\}\}/g, sampleVariables.unsubscribe_url || '#');
+            content = content.replace(/\{\{\s*company\.name\s*\}\}/g, sampleVariables.company?.name || 'Bamcom Real Estate & Investments Ltd');
+        }
+        setPreviewHtml(content);
     };
 
     const handleSubmit = (e) => {
@@ -225,14 +320,23 @@ export default function Create({ auth, categories, statuses, sampleVariables }) 
                             </div>
                         </div>
 
-                        {/* HTML Content Textarea */}
+                        {/* HTML Content Textarea with Rich Component Toolbar */}
                         <div>
+                            {/* Rich Component Insertion Toolbar */}
+                            <TemplateComponentToolbar
+                                bodyHtml={data.body_html}
+                                setBodyHtml={(val) => setData('body_html', val)}
+                                textareaRef={textareaRef}
+                                sampleVariables={sampleVariables}
+                            />
+
                             <div className="flex items-center justify-between mb-1">
                                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">HTML Template Body *</label>
-                                <span className="text-[11px] text-slate-400">Strictly sanitized &bull; No raw PHP permitted</span>
+                                <span className="text-[11px] text-slate-400">Strictly sanitized &bull; Supports Images, Buttons &amp; Social Links</span>
                             </div>
                             <textarea
-                                rows="10"
+                                ref={textareaRef}
+                                rows="12"
                                 required
                                 value={data.body_html}
                                 onChange={(e) => setData('body_html', e.target.value)}

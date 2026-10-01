@@ -282,4 +282,26 @@ class EmailTemplateController extends Controller
             'email' => $message,
         ], HttpResponse::HTTP_ACCEPTED);
     }
+
+    /**
+     * Upload an image asset for email templates.
+     */
+    public function uploadImage(Request $request): JsonResponse
+    {
+        Gate::authorize('create', EmailTemplate::class);
+
+        $request->validate([
+            'image' => ['required', 'file', 'image', 'mimes:jpeg,png,jpg,gif,webp,svg', 'max:5120'],
+        ]);
+
+        $file = $request->file('image');
+        $path = $file->store('email-assets', 'public');
+
+        return response()->json([
+            'url' => asset('storage/'.$path),
+            'path' => $path,
+            'name' => $file->getClientOriginalName(),
+            'size' => $file->getSize(),
+        ], HttpResponse::HTTP_CREATED);
+    }
 }

@@ -16,7 +16,9 @@ use App\Models\User;
 use App\Services\Email\EmailTemplateService;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class EmailTemplateSystemTest extends TestCase
@@ -437,5 +439,120 @@ class EmailTemplateSystemTest extends TestCase
             'email_template_id' => $template->id,
             'type' => EmailMessageType::Test->value,
         ]);
+    }
+
+    /**
+     * Test authorized user can upload email template image asset.
+     */
+    public function test_user_can_upload_template_image_asset(): void
+    {
+        Storage::fake('public');
+
+        $fakeImage = UploadedFile::fake()->image('luxury-duplex-banner.jpg', 1200, 600);
+
+        $response = $this->actingAs($this->superAdmin)
+            ->postJson(route('email-templates.upload-image'), [
+                'image' => $fakeImage,
+            ]);
+
+        $response->assertCreated();
+        $response->assertJsonStructure([
+            'url',
+            'path',
+            'name',
+            'size',
+        ]);
+
+        $path = $response->json('path');
+        Storage::disk('public')->assertExists($path);
+        $this->assertStringContainsString('storage/email-assets', $response->json('url'));
+    }
+
+    /**
+     * Test template renders and safely preserves images, CTA buttons, and social media icons.
+     */
+    public function test_template_renders_and_preserves_images_cta_buttons_and_social_icons(): void
+    {
+        $richHtml = '
+            <h2>Grand Waterfront Launch for {{ contact.first_name }}</h2>
+            <!-- Image Component -->
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <td align="center">
+                  <a href="https://bamcomcrm.com/properties/villa">
+                    <img src="https://images.unsplash.com/photo-1613490493576-7fde63acd811" alt="Waterfront Villa" width="600" style="max-width: 100%; border-radius: 8px;" />
+                  </a>
+                  <p>Lekki Phase 1 Waterfront Villa</p>
+                </td>
+              </tr>
+            </table>
+
+            <!-- CTA Link Button Component -->
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 20px auto;">
+              <tr>
+                <td align="center" bgcolor="#0284c7" style="border-radius: 8px;">
+                  <a href="https://bamcomcrm.com/inspections/book" style="display: inline-block; padding: 12px 28px; color: #ffffff; background-color: #0284c7; text-decoration: none; border-radius: 8px;">
+                    Schedule Site Inspection &rarr;
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Social Media Icons Component -->
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <td align="center">
+                  <p>Connect with Bamcom Real Estate:</p>
+                  <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="padding: 0 6px;">
+                        <a href="https://wa.me/2348002262662"><img src="/images/email-icons/whatsapp.svg" alt="WhatsApp" width="28" height="28" /></a>
+                      </td>
+                      <td style="padding: 0 6px;">
+                        <a href="https://instagram.com/bamcomrealestate"><img src="/images/email-icons/instagram.svg" alt="Instagram" width="28" height="28" /></a>
+                      </td>
+                      <td style="padding: 0 6px;">
+                        <a href="https://linkedin.com/company/bamcom-real-estate"><img src="/images/email-icons/linkedin.svg" alt="LinkedIn" width="28" height="28" /></a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <p><a href="{{ unsubscribe_url }}">Unsubscribe</a></p>
+        ';
+
+        $template = EmailTemplate::factory()->create([
+            'name' => 'Rich Media Showcase',
+            'subject' => 'VIP Invitation for {{ contact.first_name }}',
+            'body_html' => $richHtml,
+            'category' => EmailTemplateCategory::Marketing->value,
+        ]);
+
+        $rendered = $this->templateService->render(
+            htmlTemplate: $template->body_html,
+            variables: [
+                'contact' => ['first_name' => 'Babajide'],
+                'unsubscribe_url' => 'https://bamcomcrm.com/unsubscribe',
+            ],
+            wrapWithBrand: true
+        );
+
+        // Assert Image is preserved and rendered
+        $this->assertStringContainsString('<img src="https://images.unsplash.com/photo-1613490493576-7fde63acd811"', $rendered['html']);
+        $this->assertStringContainsString('alt="Waterfront Villa"', $rendered['html']);
+
+        // Assert Link Button is preserved and rendered
+        $this->assertStringContainsString('href="https://bamcomcrm.com/inspections/book"', $rendered['html']);
+        $this->assertStringContainsString('Schedule Site Inspection &rarr;', $rendered['html']);
+        $this->assertStringContainsString('background-color: #0284c7', $rendered['html']);
+
+        // Assert Social Media Icons are preserved and rendered
+        $this->assertStringContainsString('/images/email-icons/whatsapp.svg', $rendered['html']);
+        $this->assertStringContainsString('/images/email-icons/instagram.svg', $rendered['html']);
+        $this->assertStringContainsString('/images/email-icons/linkedin.svg', $rendered['html']);
+        $this->assertStringContainsString('https://wa.me/2348002262662', $rendered['html']);
+        $this->assertStringContainsString('Connect with Bamcom Real Estate:', $rendered['html']);
     }
 }

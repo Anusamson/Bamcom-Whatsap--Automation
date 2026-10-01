@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { 
@@ -13,6 +13,7 @@ import {
     Wand2,
     Trash2
 } from 'lucide-react';
+import TemplateComponentToolbar from '@/Components/Email/TemplateComponentToolbar';
 
 export default function Edit({ auth, template, categories, statuses, sampleVariables }) {
     const { data, setData, put, processing, errors } = useForm({
@@ -27,12 +28,27 @@ export default function Edit({ auth, template, categories, statuses, sampleVaria
 
     const [previewMode, setPreviewMode] = useState('desktop');
     const [previewHtml, setPreviewHtml] = useState(template.body_html || '');
+    const textareaRef = useRef(null);
 
     const requiresUnsubscribe = ['marketing', 'newsletter', 'promotion', 're_engagement'].includes(data.category);
     const hasUnsubscribe = /\{\{\s*unsubscribe_url\s*\}\}|\{\s*unsubscribe_url\s*\}|unsubscribe/i.test(data.body_html);
 
     const insertVariable = (tag) => {
-        setData('body_html', data.body_html + ' ' + tag);
+        if (!textareaRef.current) {
+            setData('body_html', data.body_html + ' ' + tag);
+            return;
+        }
+        const textarea = textareaRef.current;
+        const start = textarea.selectionStart ?? data.body_html.length;
+        const end = textarea.selectionEnd ?? data.body_html.length;
+        const before = (data.body_html || '').substring(0, start);
+        const after = (data.body_html || '').substring(end);
+        setData('body_html', before + tag + after);
+        setTimeout(() => {
+            textarea.focus();
+            const newCursor = start + tag.length;
+            textarea.setSelectionRange(newCursor, newCursor);
+        }, 50);
     };
 
     const autoGeneratePlainText = () => {
@@ -44,18 +60,43 @@ export default function Edit({ auth, template, categories, statuses, sampleVaria
         setData('body_plain', text);
     };
 
+    // Real-time synchronization of Live Preview
+    useEffect(() => {
+        let content = data.body_html || '';
+        if (sampleVariables) {
+            content = content.replace(/\{\{\s*contact\.first_name\s*\}\}/g, sampleVariables.contact?.first_name || 'Babajide');
+            content = content.replace(/\{\{\s*contact\.last_name\s*\}\}/g, sampleVariables.contact?.last_name || 'Adeleke');
+            content = content.replace(/\{\{\s*agent\.name\s*\}\}/g, sampleVariables.agent?.name || 'Kemi Alabi');
+            content = content.replace(/\{\{\s*agent\.phone\s*\}\}/g, sampleVariables.agent?.phone || '+234 812 987 6543');
+            content = content.replace(/\{\{\s*agent\.email\s*\}\}/g, sampleVariables.agent?.email || 'kemi.alabi@bamcomcrm.com');
+            content = content.replace(/\{\{\s*agent\.role\s*\}\}/g, sampleVariables.agent?.role || 'Senior Investment Specialist');
+            content = content.replace(/\{\{\s*property\.name\s*\}\}/g, sampleVariables.property?.name || 'The Grandview Waterfront Villa');
+            content = content.replace(/\{\{\s*property\.price\s*\}\}/g, sampleVariables.property?.price || '₦185,000,000');
+            content = content.replace(/\{\{\s*property\.location\s*\}\}/g, sampleVariables.property?.location || 'Lekki Phase 1, Lagos');
+            content = content.replace(/\{\{\s*property\.plot_size\s*\}\}/g, sampleVariables.property?.plot_size || '850 sqm');
+            content = content.replace(/\{\{\s*inspection\.date\s*\}\}/g, sampleVariables.inspection?.date || 'Saturday, 12th October 2026');
+            content = content.replace(/\{\{\s*inspection\.time\s*\}\}/g, sampleVariables.inspection?.time || '11:00 AM (WAT)');
+            content = content.replace(/\{\{\s*unsubscribe_url\s*\}\}/g, sampleVariables.unsubscribe_url || '#');
+            content = content.replace(/\{\{\s*company\.name\s*\}\}/g, sampleVariables.company?.name || 'Bamcom Real Estate & Investments Ltd');
+            content = content.replace(/\{\{\s*company\.phone\s*\}\}/g, sampleVariables.company?.phone || '+234 800 226 2662');
+            content = content.replace(/\{\{\s*app\.url\s*\}\}/g, sampleVariables.app?.url || window.location.origin);
+        }
+        setPreviewHtml(content);
+    }, [data.body_html, sampleVariables]);
+
     const updateLivePreview = () => {
         let content = data.body_html;
-        content = content.replace(/\{\{\s*contact\.first_name\s*\}\}/g, sampleVariables.contact.first_name);
-        content = content.replace(/\{\{\s*contact\.last_name\s*\}\}/g, sampleVariables.contact.last_name);
-        content = content.replace(/\{\{\s*agent\.name\s*\}\}/g, sampleVariables.agent.name);
-        content = content.replace(/\{\{\s*property\.name\s*\}\}/g, sampleVariables.property.name);
-        content = content.replace(/\{\{\s*property\.price\s*\}\}/g, sampleVariables.property.price);
-        content = content.replace(/\{\{\s*inspection\.date\s*\}\}/g, sampleVariables.inspection.date);
-        content = content.replace(/\{\{\s*inspection\.time\s*\}\}/g, sampleVariables.inspection.time);
-        content = content.replace(/\{\{\s*unsubscribe_url\s*\}\}/g, sampleVariables.unsubscribe_url);
-        content = content.replace(/\{\{\s*company\.name\s*\}\}/g, sampleVariables.company.name);
-
+        if (sampleVariables) {
+            content = content.replace(/\{\{\s*contact\.first_name\s*\}\}/g, sampleVariables.contact?.first_name || 'Babajide');
+            content = content.replace(/\{\{\s*contact\.last_name\s*\}\}/g, sampleVariables.contact?.last_name || 'Adeleke');
+            content = content.replace(/\{\{\s*agent\.name\s*\}\}/g, sampleVariables.agent?.name || 'Kemi Alabi');
+            content = content.replace(/\{\{\s*property\.name\s*\}\}/g, sampleVariables.property?.name || 'The Grandview Waterfront Villa');
+            content = content.replace(/\{\{\s*property\.price\s*\}\}/g, sampleVariables.property?.price || '₦185,000,000');
+            content = content.replace(/\{\{\s*inspection\.date\s*\}\}/g, sampleVariables.inspection?.date || 'Saturday, 12th October 2026');
+            content = content.replace(/\{\{\s*inspection\.time\s*\}\}/g, sampleVariables.inspection?.time || '11:00 AM (WAT)');
+            content = content.replace(/\{\{\s*unsubscribe_url\s*\}\}/g, sampleVariables.unsubscribe_url || '#');
+            content = content.replace(/\{\{\s*company\.name\s*\}\}/g, sampleVariables.company?.name || 'Bamcom Real Estate & Investments Ltd');
+        }
         setPreviewHtml(content);
     };
 
@@ -214,13 +255,23 @@ export default function Edit({ auth, template, categories, statuses, sampleVaria
                             </div>
                         </div>
 
-                        {/* HTML Editor */}
+                        {/* HTML Editor with Rich Component Toolbar */}
                         <div>
+                            {/* Rich Component Insertion Toolbar */}
+                            <TemplateComponentToolbar
+                                bodyHtml={data.body_html}
+                                setBodyHtml={(val) => setData('body_html', val)}
+                                textareaRef={textareaRef}
+                                sampleVariables={sampleVariables}
+                            />
+
                             <div className="flex items-center justify-between mb-1">
                                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">HTML Template Body *</label>
+                                <span className="text-[11px] text-slate-400">Strictly sanitized &bull; Supports Images, Buttons &amp; Social Links</span>
                             </div>
                             <textarea
-                                rows="10"
+                                ref={textareaRef}
+                                rows="12"
                                 required
                                 value={data.body_html}
                                 onChange={(e) => setData('body_html', e.target.value)}

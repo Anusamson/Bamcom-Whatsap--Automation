@@ -183,6 +183,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/emails/test', [EmailController::class, 'sendTest'])->name('emails.test');
     Route::get('/emails/stats', [EmailController::class, 'stats'])->name('emails.stats');
     Route::get('/emails/{email}', [EmailController::class, 'show'])->name('emails.show');
+    Route::post('/email-templates/upload-image', [EmailTemplateController::class, 'uploadImage'])->name('email-templates.upload-image');
     Route::resource('email-templates', EmailTemplateController::class);
     Route::post('/email-templates/{emailTemplate}/preview', [EmailTemplateController::class, 'preview'])->name('email-templates.preview');
     Route::post('/email-templates/{emailTemplate}/test', [EmailTemplateController::class, 'sendTest'])->name('email-templates.test');
