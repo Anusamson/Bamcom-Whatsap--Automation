@@ -166,10 +166,26 @@ class EmailService
             ],
         ]);
 
-        // Dispatch Asynchronous Queue Job
-        SendEmailJob::dispatch($message->id);
+        // Dispatch Asynchronous Queue Job with resilient fallback
+        try {
+            SendEmailJob::dispatch($message->id);
+        } catch (\Throwable $e) {
+            Log::warning('EmailService: Queue dispatch failed, falling back to direct delivery', [
+                'id' => $message->id,
+                'error' => $e->getMessage(),
+            ]);
 
-        Log::info('EmailService: Queued outbound email', [
+            try {
+                $this->deliverQueuedMessage($message);
+            } catch (\Throwable $deliveryEx) {
+                Log::error('EmailService: Direct fallback delivery failed', [
+                    'id' => $message->id,
+                    'error' => $deliveryEx->getMessage(),
+                ]);
+            }
+        }
+
+        Log::info('EmailService: Outbound email processed', [
             'id' => $message->id,
             'uuid' => $message->uuid,
             'to' => $toEmail,
